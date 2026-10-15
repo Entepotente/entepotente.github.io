@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -140,6 +139,107 @@
       <p class="hint" id="pairNote"></p>
     </div>
   </section>
+
+  <section class="tool" id="conversor">
+    <h3>Conversor de formato de audio</h3>
+    <p class="lead">Convierte tus canciones a WAV o MP3. Los archivos no se suben a ningún servidor: todo se hace en tu navegador.</p>
+    <input id="cvFiles" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aiff,.aif" multiple hidden>
+    <div id="cvDrop" class="drop" tabindex="0" role="button" aria-label="Seleccionar o arrastrar archivos de audio para convertir">
+      <strong>Arrastra tus canciones aquí o haz clic para elegirlas</strong>
+      <p>Admite los formatos que lea tu navegador (MP3, WAV, FLAC, M4A, AAC, OGG…)</p>
+    </div>
+    <label>Formato de salida
+      <select id="cvFmt"><option value="wav16">WAV 16 bits (sin pérdidas)</option><option value="wav24">WAV 24 bits (sin pérdidas)</option><option value="mp3">MP3</option></select>
+    </label>
+    <label id="cvBrWrap" hidden>Calidad MP3
+      <select id="cvBr"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256" selected>256 kbps</option><option value="320">320 kbps</option></select>
+    </label>
+    <label>Frecuencia de muestreo
+      <select id="cvSr"><option value="44100">44,1 kHz</option><option value="48000">48 kHz</option></select>
+    </label>
+    <label>Canales
+      <select id="cvCh"><option value="orig">Mantener</option><option value="1">Mono</option></select>
+    </label>
+    <div class="bulk-actions"><button id="cvGo" type="button">Convertir</button><button id="cvClear" type="button">Vaciar lista</button></div>
+    <p class="hint">Convertir de MP3 u otro formato con pérdida a WAV no recupera calidad. Las etiquetas (título, artista, portada) no se conservan. Para MP3 se descarga el codificador lamejs desde un CDN externo (jsDelivr) la primera vez. Los archivos muy grandes pueden tardar o agotar la memoria del móvil.</p>
+    <div id="cvList" aria-live="polite"></div>
+  </section>
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+    const el = (t, x, c) => { const n = document.createElement(t); if (x != null) n.textContent = x; if (c) n.className = c; return n; };
+/*WAV*/
+function wavBlob(chs,sr,bits){const n=chs[0].length,c=chs.length,bps=bits/8,data=n*c*bps,buf=new ArrayBuffer(44+data),v=new DataView(buf);
+const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+w(0,'RIFF');v.setUint32(4,36+data,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,sr,true);v.setUint32(28,sr*c*bps,true);v.setUint16(32,c*bps,true);v.setUint16(34,bits,true);w(36,'data');v.setUint32(40,data,true);
+let o=44;for(let i=0;i<n;i++)for(let ch=0;ch<c;ch++){const s=Math.max(-1,Math.min(1,chs[ch][i]));
+if(bits===16){v.setInt16(o,Math.round(s<0?s*32768:s*32767),true);o+=2}else{const x=Math.round(s<0?s*8388608:s*8388607);v.setUint8(o,x&255);v.setUint8(o+1,(x>>8)&255);v.setUint8(o+2,(x>>16)&255);o+=3}}
+return new Blob([buf],{type:'audio/wav'})}
+/*END*/
+
+    const LAME = ['lame.min.js','https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js','https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js'];
+    function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { s.remove(); rej(new Error(src)); }; document.head.appendChild(s); }); }
+    async function loadLame() { if (window.lamejs) return; for (const u of LAME) { try { await loadScript(u); if (window.lamejs) return; } catch (e) {} } throw new Error('No se ha podido cargar el codificador MP3. Comprueba tu conexión o usa WAV.'); }
+    async function mp3Blob(chs, sr, kbps) {
+      await loadLame();
+      const c = chs.length, enc = new lamejs.Mp3Encoder(c, sr, kbps), out = [], bs = 1152;
+      const toI = f => { const a = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); a[i] = s < 0 ? s * 32768 : s * 32767; } return a; };
+      const L = toI(chs[0]), R = c > 1 ? toI(chs[1]) : null;
+      for (let i = 0, k = 0; i < L.length; i += bs, k++) {
+        const b = c > 1 ? enc.encodeBuffer(L.subarray(i, i + bs), R.subarray(i, i + bs)) : enc.encodeBuffer(L.subarray(i, i + bs));
+        if (b.length) out.push(new Int8Array(b));
+        if (k % 200 === 0) await new Promise(r => setTimeout(r));
+      }
+      const e = enc.flush(); if (e.length) out.push(new Int8Array(e));
+      return new Blob(out, {type: 'audio/mpeg'});
+    }
+    const EXT = /\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff|aif)$/i, items = []; let busy = false;
+    function render() {
+      const box = $('cvList'); box.replaceChildren();
+      items.forEach(it => {
+        const d = el('div', null, 'log'); d.appendChild(el('span', `${it.f.name} → ${it.msg} `));
+        if (it.url) { const a = el('a', 'Descargar'); a.href = it.url; a.download = it.out; d.appendChild(a); }
+        box.appendChild(d);
+      });
+    }
+    function drop(list) {
+      let rejected = 0;
+      for (const f of list) { if (EXT.test(f.name) || f.type.startsWith('audio/')) items.push({f, msg: 'pendiente', url: null, out: ''}); else rejected++; }
+      render(); if (rejected) $('cvList').appendChild(el('div', `${rejected} archivo(s) ignorado(s) por no ser audio.`, 'log'));
+    }
+    async function convert(it) {
+      const sr = +$('cvSr').value, fmt = $('cvFmt').value, Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const ab = await new Ctx(2, 1, sr).decodeAudioData(await it.f.arrayBuffer());
+      let chs = []; for (let c = 0; c < ab.numberOfChannels; c++) chs.push(ab.getChannelData(c));
+      if ($('cvCh').value === '1') { const m = new Float32Array(ab.length); for (const d of chs) for (let i = 0; i < m.length; i++) m[i] += d[i] / chs.length; chs = [m]; } else chs = chs.slice(0, 2);
+      const blob = fmt === 'mp3' ? await mp3Blob(chs, sr, +$('cvBr').value) : wavBlob(chs, sr, fmt === 'wav24' ? 24 : 16);
+      if (it.url) URL.revokeObjectURL(it.url);
+      it.url = URL.createObjectURL(blob); it.out = it.f.name.replace(/\.[^.]+$/, '') + (fmt === 'mp3' ? '.mp3' : '.wav');
+      it.msg = `listo (${(blob.size / 1048576).toFixed(1)} MB)`;
+    }
+    async function run() {
+      if (busy) return; busy = true;
+      for (const it of items) {
+        it.msg = 'convirtiendo…'; render(); await new Promise(r => setTimeout(r, 30));
+        try { if (it.f.size > 150 * 1048576) throw new Error('archivo demasiado grande (máx. 150 MB)'); await convert(it); }
+        catch (e) { it.msg = 'error: ' + (e && e.message && e.message.length < 120 ? e.message : 'formato no compatible o archivo dañado'); }
+        render();
+      }
+      busy = false;
+    }
+    const inp = $('cvFiles'), dz = $('cvDrop');
+    inp.addEventListener('change', () => { drop(Array.from(inp.files)); inp.value = ''; });
+    dz.addEventListener('click', () => inp.click());
+    dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } });
+    ['dragenter','dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('on'); }));
+    ['dragleave','drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('on'); }));
+    dz.addEventListener('drop', e => drop(Array.from(e.dataTransfer.files)));
+    $('cvFmt').addEventListener('input', () => { $('cvBrWrap').hidden = $('cvFmt').value !== 'mp3'; });
+    $('cvGo').addEventListener('click', () => { if (!items.length) { $('cvList').textContent = 'Añade primero algún archivo de audio.'; return; } run(); });
+    $('cvClear').addEventListener('click', () => { items.forEach(i => i.url && URL.revokeObjectURL(i.url)); items.splice(0, items.length); render(); });
+    render();
+  })();
+  </script>
 
   <p class="lead">Consejo: coloca los cortes en el inicio de compás y los efectos fuertes en el drop.</p>
   <footer><p>© Beatcut · <a href="https://entepotente.github.io/privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="https://entepotente.github.io/contacto.html">Contacto</a></p></footer>
