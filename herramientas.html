@@ -4,279 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Herramientas · Beatcut</title>
-  <meta name="description" content="Calculadora de BPM, puntos de corte y tonalidades para editar vídeos de DJ.">
+  <meta name="description" content="Calculadora de BPM, puntos de corte y análisis de tonalidades para editar vídeos de DJ.">
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
-  
-<!-- BEATCUT: CARGADOR DE AUDIO -->
-<div class="tool" id="audioTool">
-  <h3>🎵 Cargar archivos de audio</h3>
-  <p class="lead">
-    Importa tus canciones desde el ordenador y escúchalas
-    directamente en Beatcut. Los archivos no se suben a ningún servidor.
-  </p>
-
-  <label for="audioFiles">Seleccionar canciones</label>
-  <input
-    id="audioFiles"
-    type="file"
-    accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aiff,.aif"
-    multiple
-    style="width:100%;max-width:100%;margin:12px 0"
-  >
-
-  <div id="audioDrop" tabindex="0" role="button"
-       aria-label="Zona para arrastrar archivos de audio"
-       style="border:2px dashed #141414;border-radius:12px;
-       padding:28px 12px;text-align:center;background:#f4efe3;
-       margin:12px 0;cursor:pointer">
-    <strong>Arrastra tus canciones aquí</strong>
-    <p>MP3 · WAV · FLAC · M4A · AAC · OGG</p>
-    <small>También puedes hacer clic para seleccionarlas.</small>
-  </div>
-
-  <p id="audioStatus" class="out" aria-live="polite">
-    Todavía no has añadido canciones.
-  </p>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0">
-    <button type="button" id="audioPlayAll">▶ Reproducir primera</button>
-    <button type="button" id="audioClear">Vaciar lista</button>
-  </div>
-
-  <div id="audioList"></div>
-</div>
-
-<style>
-#audioTool .audio-item {
-  border: 2px solid #141414;
-  border-radius: 10px;
-  padding: 12px;
-  margin: 12px 0;
-  background: #fffdf6;
-}
-#audioTool .audio-name {
-  overflow-wrap: anywhere;
-  font-weight: 700;
-  margin-bottom: 5px;
-}
-#audioTool .audio-meta {
-  font-size: .88rem;
-  color: #4f4a3f;
-  margin-bottom: 8px;
-}
-#audioTool audio {
-  display: block;
-  width: 100%;
-  margin: 8px 0;
-}
-#audioTool .audio-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-#audioTool .audio-actions button {
-  margin: 4px 0;
-}
-</style>
-
-<script>
-(() => {
-  const input = document.getElementById("audioFiles");
-  const drop = document.getElementById("audioDrop");
-  const list = document.getElementById("audioList");
-  const status = document.getElementById("audioStatus");
-  const playAll = document.getElementById("audioPlayAll");
-  const clear = document.getElementById("audioClear");
-
-  if (!input || !drop || !list || !status) return;
-
-  const tracks = [];
-  let nextId = 0;
-  let currentAudio = null;
-
-  const supportedExtensions =
-    /\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff|aif)$/i;
-
-  function formatTime(seconds) {
-    if (!Number.isFinite(seconds)) return "Duración desconocida";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${String(secs).padStart(2, "0")}`;
-  }
-
-  function updateStatus() {
-    status.textContent = tracks.length
-      ? `${tracks.length} canción(es) cargada(s) en esta sesión.`
-      : "Todavía no has añadido canciones.";
-  }
-
-  function render() {
-    list.replaceChildren();
-
-    tracks.forEach(track => {
-      const card = document.createElement("div");
-      card.className = "audio-item";
-
-      const name = document.createElement("div");
-      name.className = "audio-name";
-      name.textContent = track.file.name;
-
-      const meta = document.createElement("div");
-      meta.className = "audio-meta";
-      meta.textContent =
-        `${(track.file.size / 1048576).toFixed(2)} MB · ` +
-        (track.duration === null
-          ? "Leyendo duración..."
-          : formatTime(track.duration));
-
-      const player = document.createElement("audio");
-      player.controls = true;
-      player.preload = "metadata";
-      player.src = track.url;
-
-      player.addEventListener("loadedmetadata", () => {
-        if (Number.isFinite(player.duration)) {
-          track.duration = player.duration;
-          meta.textContent =
-            `${(track.file.size / 1048576).toFixed(2)} MB · ` +
-            formatTime(track.duration);
-        } else {
-          meta.textContent =
-            `${(track.file.size / 1048576).toFixed(2)} MB · ` +
-            "Duración no disponible";
-        }
-      });
-
-      player.addEventListener("error", () => {
-        meta.textContent =
-          `${(track.file.size / 1048576).toFixed(2)} MB · ` +
-          "Formato no compatible con este navegador";
-      });
-
-      player.addEventListener("play", () => {
-        if (currentAudio && currentAudio !== player) {
-          currentAudio.pause();
-        }
-        currentAudio = player;
-      });
-
-      const actions = document.createElement("div");
-      actions.className = "audio-actions";
-
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.textContent = "✕ Eliminar";
-      remove.setAttribute("aria-label", `Eliminar ${track.file.name}`);
-
-      remove.addEventListener("click", () => {
-        if (currentAudio === player) currentAudio = null;
-        URL.revokeObjectURL(track.url);
-        tracks.splice(tracks.indexOf(track), 1);
-        render();
-      });
-
-      actions.appendChild(remove);
-      card.append(name, meta, player, actions);
-      list.appendChild(card);
-    });
-
-    updateStatus();
-  }
-
-  function addFiles(files) {
-    const incoming = Array.from(files);
-    let added = 0;
-    let rejected = 0;
-
-    for (const file of incoming) {
-      if (!supportedExtensions.test(file.name)) {
-        rejected++;
-        continue;
-      }
-
-      // Evita duplicar el mismo archivo en la lista.
-      if (tracks.some(t =>
-        t.file.name === file.name &&
-        t.file.size === file.size &&
-        t.file.lastModified === file.lastModified
-      )) continue;
-
-      tracks.push({
-        id: ++nextId,
-        file,
-        url: URL.createObjectURL(file),
-        duration: null
-      });
-      added++;
-    }
-
-    render();
-
-    if (rejected) {
-      status.textContent =
-        `${added} añadida(s). ${rejected} archivo(s) ignorado(s) ` +
-        "por extensión no admitida.";
-    } else if (!added && incoming.length) {
-      status.textContent = "Esos archivos ya estaban en la lista.";
-    }
-  }
-
-  input.addEventListener("change", () => {
-    addFiles(input.files);
-    input.value = "";
-  });
-
-  drop.addEventListener("click", () => input.click());
-  drop.addEventListener("keydown", event => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      input.click();
-    }
-  });
-
-  ["dragenter", "dragover"].forEach(type => {
-    drop.addEventListener(type, event => {
-      event.preventDefault();
-      drop.style.background = "#c6f432";
-    });
-  });
-
-  ["dragleave", "drop"].forEach(type => {
-    drop.addEventListener(type, event => {
-      event.preventDefault();
-      drop.style.background = "#f4efe3";
-    });
-  });
-
-  drop.addEventListener("drop", event => {
-    addFiles(event.dataTransfer.files);
-  });
-
-  playAll.addEventListener("click", () => {
-    const first = list.querySelector("audio");
-    if (first) first.play().catch(() => {
-      status.textContent =
-        "No se ha podido reproducir. Pulsa el botón del reproductor.";
-    });
-  });
-
-  clear.addEventListener("click", () => {
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-    tracks.forEach(track => URL.revokeObjectURL(track.url));
-    tracks.length = 0;
-    render();
-  });
-
-  window.addEventListener("pagehide", () => {
-    tracks.forEach(track => URL.revokeObjectURL(track.url));
-  });
-})();
-</script>
-<!-- FIN DEL CARGADOR DE AUDIO -->
-
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1052385977026732" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://entepotente.github.io/style.css">
   <style>
@@ -287,25 +16,24 @@
     .tool button { cursor:pointer; margin:.25rem .25rem .25rem 0; }
     .table-wrap { width:100%; overflow-x:auto; }
     .tool table { width:100%; border-collapse:collapse; margin:.8rem 0; }
-    .tool th, .tool td { padding:.55rem; text-align:left; border-bottom:1px solid rgba(128,128,128,.25); }
-    .c-ok { color:#1de986; font-weight:600; }
-    .c-mid { color:#d99a18; font-weight:600; }
-    .c-no { color:#e45b65; font-weight:600; }
+    .tool th, .tool td { padding:.55rem; text-align:left; border-bottom:1px solid rgba(20,20,20,.25); }
+    .tool td input { width:100%; min-width:4.5rem; padding:.3rem .4rem; }
+    .tool td button.mini { padding:.1rem .45rem; font-size:.8rem; box-shadow:2px 2px 0 #141414; }
     .hint { opacity:.8; font-size:.92rem; }
     .bulk-actions { display:flex; flex-wrap:wrap; gap:.4rem; margin:.6rem 0; }
-    .summary { padding:.75rem; border:1px solid rgba(128,128,128,.3); border-radius:10px; margin:.75rem 0; }
+    .summary { padding:.75rem; border:2px solid #141414; border-radius:10px; margin:.75rem 0; background:#fffdf6; }
+    .drop { border:2px dashed #141414; border-radius:12px; padding:1.6rem .8rem; text-align:center; background:#f4efe3; margin:.8rem 0; cursor:pointer; }
+    .drop.on { background:#c6f432; }
+    .drop p { margin:.3rem 0; }
+    .log { font-size:.9rem; margin:.4rem 0; overflow-wrap:anywhere; }
+    .filters { border:2px solid #141414; border-radius:12px; padding:.7rem 1rem; margin:1rem 0; background:#fffdf6; }
+    .filters summary { cursor:pointer; font-weight:700; }
+    .filters .grid { display:flex; flex-wrap:wrap; gap:.4rem 1rem; margin-top:.8rem; }
   </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="top" aria-label="Principal">
-    <a href="https://entepotente.github.io/index.html">Inicio</a>
-    <a href="https://entepotente.github.io/noticias.html">Actualidad</a>
-    <a href="https://entepotente.github.io/tops.html">Tops</a>
-    <a href="https://entepotente.github.io/guias.html">Guías</a>
-    <a href="https://entepotente.github.io/herramientas.html" aria-current="page">Herramientas</a>
-    <a href="https://entepotente.github.io/publicidad.html">Anúnciate</a>
-  </nav>
+  <nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html" aria-current="page">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a></nav>
 
   <h1>Herramientas</h1>
   <p class="lead">Calcula dónde cortar para que tu edit vaya al ritmo.</p>
@@ -329,11 +57,20 @@
     <p class="out" id="out" aria-live="polite"></p>
   </section>
 
-  <section class="tool">
+  <section class="tool" id="tonalidades">
     <h3>Tonalidades y mezcla armónica</h3>
-    <p class="lead">Añade canciones individualmente o pega una lista completa para analizar muchas canciones de una vez. Se admiten tonalidades como 8A, Am, F#m, La menor o Do mayor.</p>
+    <p class="lead">Sube tus canciones para que se analice su BPM y su tonalidad, o añádelas a mano. Se admiten tonalidades como 8A, Am, F#m, La menor o Do mayor.</p>
 
-    <h4>Añadir una canción</h4>
+    <h4>Analizar archivos de audio</h4>
+    <p class="hint">Los archivos no se suben a ningún servidor ni se reproducen: se analizan en tu navegador (unos segundos por canción) y solo se guarda el resultado. Es una estimación: revisa los datos, ya que el BPM puede salir al doble o a la mitad (usa ½ y ×2), y la tonalidad puede confundir una tonalidad mayor con su relativa menor.</p>
+    <input id="audioFiles" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aiff,.aif" multiple hidden>
+    <div id="audioDrop" class="drop" tabindex="0" role="button" aria-label="Seleccionar o arrastrar archivos de audio para analizar">
+      <strong>Arrastra tus canciones aquí o haz clic para elegirlas</strong>
+      <p>MP3 · WAV · FLAC · M4A · AAC · OGG</p>
+    </div>
+    <div id="audioLog" aria-live="polite"></div>
+
+    <h4>Añadir una canción a mano</h4>
     <label>Canción <input id="title" type="text" maxlength="80" placeholder="Nombre de la canción"></label>
     <label>Tonalidad <input id="key" type="text" maxlength="16" placeholder="Ej. 8A, F#m"></label>
     <label>BPM <input id="kbpm" type="number" min="1" max="300" placeholder="Ej. 128"></label>
@@ -350,18 +87,48 @@
       <button id="bulkReplace" type="button">Reemplazar lista actual</button>
       <button id="clear" type="button">Vaciar canciones</button>
     </div>
-    <p class="out" id="bulkMsg" aria-live="polite"></p>
+    <p class="out" id="bulkMsg" aria-live="polite" style="white-space:pre-line"></p>
+
+    <details class="filters" id="filters">
+      <summary>Filtrar y ordenar</summary>
+      <div class="grid">
+        <label>Nombre <input id="fName" type="search" placeholder="Buscar por nombre"></label>
+        <label>BPM mín. <input id="fMin" type="number" min="0" max="300" style="width:6rem"></label>
+        <label>BPM máx. <input id="fMax" type="number" min="0" max="300" style="width:6rem"></label>
+        <label>Tonalidad <select id="fKey"></select></label>
+        <label>Compatible con <select id="fRef"></select></label>
+        <label>Compatibilidad
+          <select id="fComp">
+            <option value="">Todas</option>
+            <option value="ok">Compatibles (misma, relativa, ±1)</option>
+            <option value="mid">Cambio de energía (±2)</option>
+            <option value="no">Poco compatibles</option>
+          </select>
+        </label>
+        <label>Ordenar por
+          <select id="fSort">
+            <option value="">Orden de entrada</option>
+            <option value="name">Nombre (A–Z)</option>
+            <option value="bpmUp">BPM (menor a mayor)</option>
+            <option value="bpmDown">BPM (mayor a menor)</option>
+            <option value="key">Tonalidad (Camelot)</option>
+          </select>
+        </label>
+      </div>
+      <button id="fClear" type="button">Limpiar filtros</button>
+      <span class="hint" id="count"></span>
+    </details>
 
     <div class="summary" id="summary" hidden></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Canción</th><th>Tonalidad</th><th>Camelot</th><th>Open Key</th><th>BPM</th><th>Compatibles</th><th></th></tr></thead>
+        <thead><tr><th>Canción</th><th>Tonalidad</th><th>Camelot</th><th>Open Key</th><th>BPM</th><th>Origen</th><th>Compatibles</th><th></th></tr></thead>
         <tbody id="songs"></tbody>
       </table>
     </div>
 
     <div id="pt" hidden>
-      <h4>Comparación entre todas las canciones</h4>
+      <h4>Comparación entre las canciones mostradas</h4>
       <p class="hint">La diferencia de BPM se calcula como porcentaje respecto al tema de la primera columna. La compatibilidad armónica es una orientación, no una garantía de que la mezcla vaya a funcionar.</p>
       <div class="table-wrap">
         <table>
@@ -369,49 +136,69 @@
           <tbody id="pairs"></tbody>
         </table>
       </div>
+      <p class="hint" id="pairNote"></p>
     </div>
   </section>
 
   <p class="lead">Consejo: coloca los cortes en el inicio de compás y los efectos fuertes en el drop.</p>
-  <footer><p>© Beatcut · <a href="https://entepotente.github.io/privacidad.html">Privacidad</a> · <a href="https://entepotente.github.io/contacto.html">Contacto</a></p></footer>
+  <footer><p>© Beatcut · <a href="https://entepotente.github.io/privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="https://entepotente.github.io/contacto.html">Contacto</a></p></footer>
 </div>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const el = (tag, value, cls) => {
-    const node = document.createElement(tag);
-    if (value != null) node.textContent = value;
-    if (cls) node.className = cls;
-    return node;
-  };
+  const el = (tag, value, cls) => { const n = document.createElement(tag); if (value != null) n.textContent = value; if (cls) n.className = cls; return n; };
 
-  // Tonalidades Camelot: B = mayor, A = menor.
+/*ANALYSIS*/
+function fftInPlace(re,im){const n=re.length;
+for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}}
+for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);
+for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const a=i+k,b=a+len/2,xr=re[b]*cr-im[b]*ci,xi=re[b]*ci+im[b]*cr;re[b]=re[a]-xr;im[b]=im[a]-xi;re[a]+=xr;im[a]+=xi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t}}}}
+const KP_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88],KP_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+function corr(a,b){let ma=0,mb=0;for(let i=0;i<12;i++){ma+=a[i];mb+=b[i]}ma/=12;mb/=12;let s=0,va=0,vb=0;for(let i=0;i<12;i++){const p=a[i]-ma,q=b[i]-mb;s+=p*q;va+=p*p;vb+=q*q}return s/Math.sqrt(va*vb||1)}
+function analyzeKey(x,sr){const N=16384,hop=8192,re=new Float64Array(N),im=new Float64Array(N),win=new Float64Array(N),ch=new Float64Array(12),mag=new Float64Array(N/2);
+for(let i=0;i<N;i++)win[i]=.5-.5*Math.cos(2*Math.PI*i/(N-1));
+const lo=Math.ceil(65*N/sr),hi=Math.floor(1100*N/sr);
+for(let s=0;s+N<=x.length;s+=hop){for(let i=0;i<N;i++){re[i]=x[s+i]*win[i];im[i]=0}fftInPlace(re,im);
+let mx=0;for(let b=lo-1;b<=hi+1;b++){mag[b]=Math.hypot(re[b],im[b]);if(mag[b]>mx)mx=mag[b]}
+for(let b=lo;b<=hi;b++)if(mag[b]>mag[b-1]&&mag[b]>=mag[b+1]&&mag[b]>.05*mx){const pc=((Math.round(12*Math.log2(b*sr/N/440)+69)%12)+12)%12;ch[pc]+=Math.sqrt(mag[b])}}
+let tot=0;for(let i=0;i<12;i++)tot+=ch[i];if(!tot)return null;
+let best=-2,res=null;for(let t=0;t<12;t++){const r=[];for(let i=0;i<12;i++)r.push(ch[(t+i)%12]);
+for(const [prof,minor] of [[KP_MAJ,false],[KP_MIN,true]]){const c=corr(r,prof);if(c>best){best=c;res={pc:t,minor}}}}
+const pc=res.minor?(res.pc+3)%12:res.pc;return{n:(7+(pc*7)%12)%12+1,l:res.minor?'A':'B'}}
+function analyzeBpm(x,sr){const hop=256,fr=sr/hop,nf=Math.floor(x.length/hop);if(nf<400)return null;
+const a=Math.exp(-2*Math.PI*150/sr),lowE=new Float64Array(nf),hiE=new Float64Array(nf);let y=0,p=0;
+for(let f=0;f<nf;f++){let l=0,h=0;for(let i=0;i<hop;i++){const s=x[f*hop+i];y=(1-a)*s+a*y;l+=y*y;const d=s-p;p=s;h+=d*d}lowE[f]=Math.log(1+1e4*l/hop);hiE[f]=Math.log(1+1e4*h/hop)}
+const norm=e=>{let s=0;const o=new Float64Array(nf);for(let f=1;f<nf;f++){o[f]=Math.max(0,e[f]-e[f-1]);s+=o[f]}const m=s/nf||1;for(let f=0;f<nf;f++)o[f]/=m;return o};
+const ol=norm(lowE),oh=norm(hiE),on=new Float64Array(nf);let mean=0;for(let f=0;f<nf;f++){on[f]=ol[f]+.5*oh[f];mean+=on[f]}mean/=nf;for(let f=0;f<nf;f++)on[f]-=mean;
+const maxLag=Math.ceil(4*fr*60/70)+3,ac=new Float64Array(maxLag);
+for(let l=0;l<maxLag;l++){let s=0;for(let f=l;f<nf;f++)s+=on[f]*on[f-l];ac[l]=s/(nf-l)}
+if(!(ac[0]>0))return null;
+const g=l=>{const i=Math.floor(l),t=l-i;return i+1<maxLag?(ac[i]*(1-t)+ac[i+1]*t)/ac[0]:0};
+let best=0,bs=-1e9;for(let b=70;b<=180;b+=.25){const lag=fr*60/b;let s=g(lag)+.6*g(2*lag)+.4*g(3*lag)+.3*g(4*lag);s*=Math.exp(-.5*Math.pow(Math.log2(b/125)/.9,2));if(s>bs){bs=s;best=b}}
+return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/10}
+/*END*/
+
+
+  // ---- Tonalidades (Camelot: B = mayor, A = menor) ----
   const MAJ = ['B','F#','Db','Ab','Eb','Bb','F','C','G','D','A','E'];
   const MIN = ['Abm','Ebm','Bbm','Fm','Cm','Gm','Dm','Am','Em','Bm','F#m','C#m'];
   const PC = {c:0,d:2,e:4,f:5,g:7,a:9,b:11,do:0,re:2,mi:4,fa:5,sol:7,la:9,si:11};
   const ES = {C:'Do',D:'Re',E:'Mi',F:'Fa',G:'Sol',A:'La',B:'Si'};
 
   function parseKey(input) {
-    let t = input.trim().toLowerCase().replaceAll('♯','#').replaceAll('♭','b');
-    let m = t.match(/^(\d{1,2})\s*([ab])$/i);
-    if (m) {
-      const n = Number(m[1]);
-      return n >= 1 && n <= 12 ? {n, l:m[2].toUpperCase()} : null;
-    }
-    m = t.match(/^(\d{1,2})\s*([dm])$/i);
-    if (m) {
-      const n = Number(m[1]);
-      return n >= 1 && n <= 12 ? {n:(n+6)%12+1, l:m[2].toLowerCase()==='d'?'B':'A'} : null;
-    }
-    m = t.match(/^(sol|do|re|mi|fa|la|si|[a-g])\s*([#b]?)\s*(m|min|minor|menor|maj|major|mayor)?$/i);
+    const t = input.trim().toLowerCase().replaceAll('♯','#').replaceAll('♭','b');
+    let m = t.match(/^(\d{1,2})\s*([ab])$/);
+    if (m) { const n = +m[1]; return n >= 1 && n <= 12 ? {n, l:m[2].toUpperCase()} : null; }
+    m = t.match(/^(\d{1,2})\s*([dm])$/);
+    if (m) { const n = +m[1]; return n >= 1 && n <= 12 ? {n:(n+6)%12+1, l:m[2]==='d'?'B':'A'} : null; }
+    m = t.match(/^(sol|do|re|mi|fa|la|si|[a-g])\s*([#b]?)\s*(m|min|minor|menor|maj|major|mayor)?$/);
     if (!m) return null;
     let pc = (PC[m[1]] + (m[2]==='#' ? 1 : m[2]==='b' ? -1 : 0) + 12) % 12;
-    const minor = /^(m|min|minor|menor)$/i.test(m[3] || '');
+    const minor = /^(m|min|minor|menor)$/.test(m[3] || '');
     if (minor) pc = (pc + 3) % 12;
     return {n:(7 + (pc*7)%12)%12 + 1, l:minor?'A':'B'};
   }
-
   const keyName = k => k.l === 'B' ? MAJ[k.n-1] : MIN[k.n-1];
   const camelot = k => `${k.n}${k.l}`;
   const openKey = k => `${((k.n-8+12)%12)+1}${k.l==='B'?'d':'m'}`;
@@ -420,154 +207,217 @@
     return (ES[root[0]] || root[0]) + (root[1] ? (root[1]==='#'?'♯':'♭') : '') + (minor?' menor':' mayor');
   };
   const compatibleKeys = k => {
-    const other = k.l === 'A' ? 'B' : 'A';
-    const down = n => (n+10)%12+1;
-    const up = n => n%12+1;
-    return [`${k.n}${k.l}`, `${down(k.n)}${k.l}`, `${up(k.n)}${k.l}`, `${k.n}${other}`, `${up(up(k.n))}${k.l}`];
+    const o = k.l === 'A' ? 'B' : 'A', dn = n => (n+10)%12+1, up = n => n%12+1;
+    return [`${k.n}${k.l}`, `${dn(k.n)}${k.l}`, `${up(k.n)}${k.l}`, `${k.n}${o}`, `${up(up(k.n))}${k.l}`];
   };
-  function relation(a,b) {
+  function relation(a, b) {
     const d = (b.n-a.n+12)%12;
-    if (d===0) return ['c-ok', a.l===b.l?'Misma tonalidad':'Relativa mayor/menor'];
-    if (a.l===b.l) {
-      if (d===1 || d===11) return ['c-ok','Mezcla suave (±1 Camelot)'];
-      if (d===2) return ['c-mid','Sube energía (+2)'];
-      if (d===10) return ['c-mid','Baja energía (−2)'];
+    if (d === 0) return ['c-ok', a.l===b.l ? 'Misma tonalidad' : 'Relativa mayor/menor'];
+    if (a.l === b.l) {
+      if (d === 1 || d === 11) return ['c-ok','Mezcla suave (±1 Camelot)'];
+      if (d === 2) return ['c-mid','Sube energía (+2)'];
+      if (d === 10) return ['c-mid','Baja energía (−2)'];
     }
     return ['c-no','Poco compatible'];
   }
 
+  // ---- Lista de canciones ----
   const songs = [];
+  let nextId = 0;
+  const make = (t, k, b, src) => ({id:++nextId, t, k, b:b||0, src});
+  const pushSongs = list => { songs.push(...list); if (songs.length > 50) songs.splice(0, songs.length-50); };
+
+  // Opciones del filtro de tonalidad
+  const fKey = $('fKey');
+  fKey.appendChild(Object.assign(el('option','Todas'),{value:''}));
+  for (let n=1;n<=12;n++) for (const l of ['A','B']) fKey.appendChild(Object.assign(el('option',`${n}${l} · ${l==='A'?MIN[n-1]:MAJ[n-1]}`),{value:`${n}${l}`}));
+
+  function refreshRef() {
+    const ref = $('fRef'), prev = ref.value;
+    ref.replaceChildren(Object.assign(el('option','— ninguna —'),{value:''}));
+    songs.forEach(s => ref.appendChild(Object.assign(el('option',s.t.slice(0,40)),{value:String(s.id)})));
+    ref.value = songs.some(s => String(s.id) === prev) ? prev : '';
+  }
+
+  function visible() {
+    const q = $('fName').value.trim().toLowerCase(), mn = +$('fMin').value || 0, mx = +$('fMax').value || 0, kk = $('fKey').value;
+    let r = songs.filter(s => (!q || s.t.toLowerCase().includes(q)) && (!mn || s.b >= mn) && (!mx || (s.b && s.b <= mx)) && (!kk || camelot(s.k) === kk));
+    const ref = songs.find(s => String(s.id) === $('fRef').value), fc = $('fComp').value;
+    if (ref && fc) r = r.filter(s => s !== ref && relation(ref.k, s.k)[0] === 'c-' + fc);
+    const so = $('fSort').value;
+    if (so === 'name') r.sort((a,b) => a.t.localeCompare(b.t,'es'));
+    else if (so === 'bpmUp') r.sort((a,b) => a.b - b.b);
+    else if (so === 'bpmDown') r.sort((a,b) => b.b - a.b);
+    else if (so === 'key') r.sort((a,b) => a.k.n - b.k.n || a.k.l.localeCompare(b.k.l));
+    return r;
+  }
+
+  function refresh() { refreshRef(); draw(); }
+
   function draw() {
-    const tbody = $('songs');
+    const shown = visible(), tbody = $('songs');
     tbody.replaceChildren();
-    songs.forEach((song,index) => {
+    shown.forEach(s => {
       const row = el('tr');
-      [song.t, `${keyName(song.k)} · ${spanishKey(song.k)}`, camelot(song.k), openKey(song.k), song.b || '–', compatibleKeys(song.k).slice(0,4).join(', ')].forEach(v => row.appendChild(el('td',String(v))));
-      const actionCell = el('td');
-      const remove = el('button','✕');
-      remove.type = 'button';
-      remove.setAttribute('aria-label',`Quitar ${song.t}`);
-      remove.addEventListener('click',() => { songs.splice(index,1); draw(); });
-      actionCell.appendChild(remove);
-      row.appendChild(actionCell);
+      row.appendChild(el('td', s.t));
+
+      const kc = el('td'), ki = el('input'); ki.type='text'; ki.value=keyName(s.k); ki.maxLength=16; ki.setAttribute('aria-label',`Tonalidad de ${s.t}`);
+      ki.addEventListener('change', () => { const k = parseKey(ki.value); if (k) { s.k = k; s.src = 'manual'; refresh(); } else { $('kmsg').textContent = 'No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; ki.value = keyName(s.k); } });
+      kc.appendChild(ki); row.appendChild(kc);
+      row.appendChild(el('td', camelot(s.k)));
+      row.appendChild(el('td', openKey(s.k)));
+
+      const bc = el('td'), bi = el('input'); bi.type='number'; bi.min=1; bi.max=300; bi.step='any'; bi.value=s.b||''; bi.setAttribute('aria-label',`BPM de ${s.t}`);
+      bi.addEventListener('change', () => { s.b = +bi.value || 0; s.src = 'manual'; draw(); });
+      bc.appendChild(bi);
+      [['½',.5],['×2',2]].forEach(([txt,f]) => { const b = el('button',txt,'mini'); b.type='button'; b.setAttribute('aria-label',`${txt} BPM de ${s.t}`); b.addEventListener('click', () => { if (s.b) { s.b = Math.round(s.b*f*10)/10; s.src='manual'; draw(); } }); bc.appendChild(b); });
+      row.appendChild(bc);
+
+      row.appendChild(el('td', s.src === 'auto' ? 'Análisis' : 'Manual'));
+      row.appendChild(el('td', compatibleKeys(s.k).slice(0,4).join(', ')));
+      const ac = el('td'), rm = el('button','✕'); rm.type='button'; rm.setAttribute('aria-label',`Quitar ${s.t}`);
+      rm.addEventListener('click', () => { songs.splice(songs.indexOf(s),1); refresh(); });
+      ac.appendChild(rm); row.appendChild(ac);
       tbody.appendChild(row);
     });
 
-    const pairs = $('pairs');
-    pairs.replaceChildren();
-    let compatibleCount = 0;
-    for (let i=0;i<songs.length;i++) {
-      for (let j=i+1;j<songs.length;j++) {
-        const a=songs[i], b=songs[j], result=relation(a.k,b.k), row=el('tr');
-        row.appendChild(el('td',`${a.t} ↔ ${b.t}`));
-        const resultCell=el('td');
-        resultCell.appendChild(el('span',result[1],result[0]));
-        row.appendChild(resultCell);
-        const diff = a.b && b.b ? `${(Math.abs(b.b-a.b)/a.b*100).toFixed(1)} %` : '–';
-        row.appendChild(el('td',diff));
-        pairs.appendChild(row);
-        if (result[0]==='c-ok') compatibleCount++;
+    const pairs = $('pairs'); pairs.replaceChildren();
+    let okCount = 0, total = 0, rendered = 0;
+    for (let i=0;i<shown.length;i++) for (let j=i+1;j<shown.length;j++) {
+      const a = shown[i], b = shown[j], r = relation(a.k,b.k);
+      total++; if (r[0]==='c-ok') okCount++;
+      if (rendered < 300) {
+        const row = el('tr'), rc = el('td');
+        row.appendChild(el('td', `${a.t} ↔ ${b.t}`));
+        rc.appendChild(el('span', r[1], r[0])); row.appendChild(rc);
+        row.appendChild(el('td', a.b && b.b ? `${(Math.abs(b.b-a.b)/a.b*100).toFixed(1)} %` : '–'));
+        pairs.appendChild(row); rendered++;
       }
     }
-    $('pt').hidden = songs.length < 2;
+    $('pt').hidden = shown.length < 2;
+    $('pairNote').textContent = total > rendered ? `Se muestran ${rendered} de ${total} parejas. Usa los filtros para acotar.` : '';
     $('summary').hidden = songs.length === 0;
-    if (songs.length) {
-      const totalPairs = songs.length*(songs.length-1)/2;
-      $('summary').textContent = `${songs.length} canciones analizadas · ${totalPairs} parejas comparadas · ${compatibleCount} con compatibilidad tonal favorable.`;
-    }
+    $('count').textContent = songs.length ? ` Mostrando ${shown.length} de ${songs.length} canciones.` : '';
+    if (songs.length) $('summary').textContent = `${shown.length} canciones mostradas · ${total} parejas comparadas · ${okCount} con compatibilidad tonal favorable.`;
   }
 
-  $('key').addEventListener('input',() => {
-    const k=parseKey($('key').value);
+  ['fName','fMin','fMax','fKey','fComp','fSort'].forEach(id => $(id).addEventListener('input', draw));
+  $('fRef').addEventListener('input', draw);
+  $('fClear').addEventListener('click', () => { ['fName','fMin','fMax','fKey','fRef','fComp','fSort'].forEach(id => $(id).value=''); draw(); });
+
+  // ---- Alta manual ----
+  $('key').addEventListener('input', () => {
+    const k = parseKey($('key').value);
     $('kprev').textContent = k ? `= ${keyName(k)} (${spanishKey(k)}) · Camelot ${camelot(k)} · Open Key ${openKey(k)} · Compatibles: ${compatibleKeys(k).slice(0,4).join(', ')}` : '';
   });
+  $('add').addEventListener('click', () => {
+    const k = parseKey($('key').value);
+    if (!k) { $('kmsg').textContent = 'No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; return; }
+    $('kmsg').textContent = '';
+    pushSongs([make($('title').value.trim() || `Canción ${songs.length+1}`, k, +$('kbpm').value, 'manual')]);
+    refresh();
+    ['title','key','kbpm'].forEach(id => $(id).value = ''); $('kprev').textContent = '';
+  });
 
-  function readSingleForm() {
-    const k=parseKey($('key').value);
-    if (!k) { $('kmsg').textContent='No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; return; }
-    $('kmsg').textContent='';
-    songs.push({t:$('title').value.trim() || `Canción ${songs.length+1}`, k, b:Number($('kbpm').value)||0});
-    draw();
-    ['title','key','kbpm'].forEach(id => $(id).value='');
-    $('kprev').textContent='';
-  }
-  $('add').addEventListener('click',readSingleForm);
-
+  // ---- Lista pegada ----
   function parseBulk(text) {
-    const accepted=[], rejected=[];
-    text.split(/\r?\n/).forEach((line,index) => {
-      const trimmed=line.trim();
-      if (!trimmed) return;
-      let parts;
-      if (trimmed.includes('\t')) parts=trimmed.split('\t');
-      else if (trimmed.includes(';')) parts=trimmed.split(';');
-      else if (trimmed.includes('|')) parts=trimmed.split('|');
-      else parts=trimmed.split(',');
-      parts=parts.map(x=>x.trim());
-      // Supports: title; key; bpm. Also tries to recognize key in a different column.
-      let title=parts[0] || `Canción ${index+1}`, keyText='', bpm=0;
-      if (parts.length>=2) {
-        if (parseKey(parts[1])) { keyText=parts[1]; bpm=Number((parts[2]||'').replace(/[^\d.]/g,''))||0; }
-        else if (parts.length>=3 && parseKey(parts[2])) { keyText=parts[2]; bpm=Number((parts[1]||'').replace(/[^\d.]/g,''))||0; }
+    const accepted = [], rejected = [];
+    text.split(/\r?\n/).forEach((line, index) => {
+      const trimmed = line.trim(); if (!trimmed) return;
+      const parts = (trimmed.includes('\t') ? trimmed.split('\t') : trimmed.includes(';') ? trimmed.split(';') : trimmed.includes('|') ? trimmed.split('|') : trimmed.split(',')).map(x => x.trim());
+      let title = parts[0] || `Canción ${index+1}`, keyText = '', bpm = 0;
+      const num = s => Number((s||'').replace(/[^\d.]/g,'')) || 0;
+      if (parts.length >= 2) {
+        if (parseKey(parts[1])) { keyText = parts[1]; bpm = num(parts[2]); }
+        else if (parts.length >= 3 && parseKey(parts[2])) { keyText = parts[2]; bpm = num(parts[1]); }
       } else {
-        const keyMatch=trimmed.match(/(?:^|\s)(\d{1,2}\s*[ABab]|[A-Ga-g](?:#|b)?\s*(?:m|min|minor|menor|maj|major|mayor)?)(?:\s|$)/);
-        if (keyMatch) {
-          keyText=keyMatch[1];
-          title=trimmed.replace(keyMatch[0],' ').replace(/\b\d{2,3}(?:\.\d+)?\s*BPM\b/i,'').trim() || title;
-          const bpmMatch=trimmed.match(/\b(\d{2,3}(?:\.\d+)?)\s*BPM\b/i);
-          bpm=bpmMatch?Number(bpmMatch[1]):0;
+        const km = trimmed.match(/(?:^|\s)(\d{1,2}\s*[ABab]|[A-Ga-g](?:#|b)?\s*(?:m|min|minor|menor|maj|major|mayor)?)(?:\s|$)/);
+        if (km) {
+          keyText = km[1];
+          title = trimmed.replace(km[0],' ').replace(/\b\d{2,3}(?:\.\d+)?\s*BPM\b/i,'').trim() || title;
+          const bm = trimmed.match(/\b(\d{2,3}(?:\.\d+)?)\s*BPM\b/i); bpm = bm ? Number(bm[1]) : 0;
         }
       }
-      const key=parseKey(keyText);
+      const key = parseKey(keyText);
       if (!key) rejected.push(`Línea ${index+1}: no se reconoce la tonalidad (${trimmed})`);
-      else accepted.push({t:title.slice(0,100),k:key,b:bpm});
+      else accepted.push(make(title.slice(0,100), key, bpm, 'manual'));
     });
-    return {accepted,rejected};
+    return {accepted, rejected};
   }
-
   function importBulk(replace) {
-    const result=parseBulk($('bulk').value);
-    if (replace) songs.splice(0,songs.length);
-    songs.push(...result.accepted);
-    // Keep comparisons usable in-browser; allow up to 50 tracks.
-    if (songs.length>50) songs.splice(0,songs.length-50);
-    draw();
-    let message=`Añadidas ${result.accepted.length} canciones válidas. Total en la lista: ${songs.length}.`;
-    if (result.rejected.length) message += `\nNo se han añadido ${result.rejected.length} líneas:\n${result.rejected.slice(0,8).join('\n')}${result.rejected.length>8?'\n…':''}`;
-    if (result.accepted.length===0 && !result.rejected.length) message='Pega primero una lista de canciones.';
-    $('bulkMsg').textContent=message;
+    const r = parseBulk($('bulk').value);
+    if (replace) songs.splice(0, songs.length);
+    pushSongs(r.accepted); refresh();
+    let msg = `Añadidas ${r.accepted.length} canciones válidas. Total en la lista: ${songs.length}.`;
+    if (r.rejected.length) msg += `\nNo se han añadido ${r.rejected.length} líneas:\n${r.rejected.slice(0,8).join('\n')}${r.rejected.length>8?'\n…':''}`;
+    if (!r.accepted.length && !r.rejected.length) msg = 'Pega primero una lista de canciones.';
+    $('bulkMsg').textContent = msg;
   }
-  $('bulkAdd').addEventListener('click',()=>importBulk(false));
-  $('bulkReplace').addEventListener('click',()=>importBulk(true));
-  $('clear').addEventListener('click',()=>{
-    songs.splice(0,songs.length); draw(); $('bulkMsg').textContent='Lista vaciada.';
-  });
+  $('bulkAdd').addEventListener('click', () => importBulk(false));
+  $('bulkReplace').addEventListener('click', () => importBulk(true));
+  $('clear').addEventListener('click', () => { songs.splice(0, songs.length); refresh(); $('audioLog').replaceChildren(); $('bulkMsg').textContent = 'Lista vaciada.'; });
 
-  // BPM cut calculator
+  // ---- Análisis de archivos de audio (en el navegador, sin reproducir ni subir) ----
+  const SR = 22050, EXT = /\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff|aif)$/i;
+  async function analyzeFile(file) {
+    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const ab = await new Ctx(1, 1, SR).decodeAudioData(await file.arrayBuffer());
+    const n = ab.length, ch = ab.numberOfChannels, len = Math.min(n, 90*SR), st = Math.max(0, Math.floor(n/2 - len/2));
+    const x = new Float32Array(len);
+    for (let c=0;c<ch;c++) { const d = ab.getChannelData(c); for (let i=0;i<len;i++) x[i] += d[st+i]/ch; }
+    return {k: analyzeKey(x,SR), b: analyzeBpm(x,SR)};
+  }
+  const queue = []; let busy = false;
+  async function runQueue() {
+    if (busy) return; busy = true;
+    while (queue.length) {
+      const f = queue.shift(), line = el('div', `⏳ ${f.name}: analizando…`, 'log'); $('audioLog').appendChild(line);
+      await new Promise(r => setTimeout(r, 30));
+      try {
+        const r = await analyzeFile(f);
+        if (!r.k) throw new Error('sin tonalidad');
+        pushSongs([make(f.name.replace(/\.[^.]+$/,''), r.k, r.b, 'auto')]); refresh();
+        line.textContent = `✔ ${f.name}: ${keyName(r.k)} · ${camelot(r.k)} · ${r.b ? r.b + ' BPM' : 'BPM no detectado'}`;
+      } catch (e) {
+        line.textContent = `✖ ${f.name}: no se ha podido analizar (formato no compatible o archivo dañado).`;
+      }
+    }
+    busy = false;
+  }
+  function addFiles(files) {
+    let rejected = 0;
+    for (const f of files) { if (EXT.test(f.name) || f.type.startsWith('audio/')) queue.push(f); else rejected++; }
+    if (rejected) $('audioLog').appendChild(el('div', `${rejected} archivo(s) ignorado(s) por no ser audio.`, 'log'));
+    runQueue();
+  }
+  const input = $('audioFiles'), drop = $('audioDrop');
+  input.addEventListener('change', () => { addFiles(Array.from(input.files)); input.value = ''; });
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  ['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('on'); }));
+  ['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('on'); }));
+  drop.addEventListener('drop', e => addFiles(Array.from(e.dataTransfer.files)));
+
+  // ---- Calculadora de cortes por BPM ----
   function calcCuts() {
-    const bpm=Number($('bpm').value), duration=Number($('dur').value), fps=Number($('fps').value);
-    if (!(bpm>0)) return;
-    const beat=60/bpm, divisions=[['1 compás',4],['1/2 compás',2],['1 tiempo',1],['1/2 tiempo',.5]];
+    const bpm = +$('bpm').value, dur = +$('dur').value, fps = +$('fps').value;
+    if (!(bpm > 0)) return;
+    const beat = 60/bpm;
     $('rows').replaceChildren();
-    divisions.forEach(([name,beats])=>{
-      const seconds=beat*beats, row=el('tr');
-      [name,seconds.toFixed(3),(seconds*fps).toFixed(1),String(Math.floor(duration/seconds))].forEach(v=>row.appendChild(el('td',v)));
+    [['1 compás',4],['1/2 compás',2],['1 tiempo',1],['1/2 tiempo',.5]].forEach(([name,beats]) => {
+      const s = beat*beats, row = el('tr');
+      [name, s.toFixed(3), (s*fps).toFixed(1), String(Math.floor(dur/s))].forEach(v => row.appendChild(el('td', v)));
       $('rows').appendChild(row);
     });
-    $('out').textContent=`A ${bpm} BPM, ${duration} s equivalen a ${(duration/(beat*4)).toFixed(1)} compases.`;
+    $('out').textContent = `A ${bpm} BPM, ${dur} s equivalen a ${(dur/(beat*4)).toFixed(1)} compases.`;
   }
-  ['bpm','dur','fps'].forEach(id=>$(id).addEventListener('input',calcCuts));
-  let taps=[];
-  $('tap').addEventListener('click',()=>{
-    const now=Date.now();
-    taps=taps.filter(t=>now-t<3000);
-    taps.push(now);
-    if(taps.length>2) {
-      $('bpm').value=Math.round(60000/((taps[taps.length-1]-taps[0])/(taps.length-1)));
-      calcCuts();
-    }
+  ['bpm','dur','fps'].forEach(id => $(id).addEventListener('input', calcCuts));
+  let taps = [];
+  $('tap').addEventListener('click', () => {
+    const now = Date.now(); taps = taps.filter(t => now-t < 3000); taps.push(now);
+    if (taps.length > 2) { $('bpm').value = Math.round(60000/((taps[taps.length-1]-taps[0])/(taps.length-1))); calcCuts(); }
   });
-  calcCuts();
+  calcCuts(); refresh();
 })();
 </script>
 </body>
