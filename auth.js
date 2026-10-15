@@ -39,7 +39,7 @@ if (firebaseConfig.apiKey === "TU_API_KEY") /* sin configurar */ {
     "auth/operation-not-allowed": "Este método de acceso aún no está activado.",
     "auth/network-request-failed": "Error de conexión. Inténtalo de nuevo."
   };
-  const fail = e => msg(errors[e.code] || "No se ha podido completar la operación.");
+  const fail = e => { console.error(e); msg((errors[e.code] || "No se ha podido completar la operación.") + " [" + (e.code || e.message) + "]"); }; /* DIAGNÓSTICO: quita el código entre corchetes cuando todo funcione */
   const pwOk = p => p.length >= 8;
 
   let mode = "login";
