@@ -12,11 +12,24 @@
 </head>
 <body>
 <div class="wrap">
-<nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a></nav>
+<nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a><button class="theme-toggle" onclick="toggleTheme()" type="button">🌙 Modo Claro/Oscuro</button></nav>
 <h1>Contacto</h1>
 <p>¿Tienes una duda, una sugerencia de guía o quieres colaborar? Escríbenos y te respondemos en cuanto podamos.</p>
 <a class="btn" href="mailto:cutbeatcut@gmail.com">Escribir a cutbeatcut@gmail.com</a>
 <p style="font-size:.9rem"><a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a></p>
 </div>
+<script>
+function toggleTheme() {
+  let theme = document.documentElement.getAttribute('data-theme');
+  if(theme === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+  }
+}
+if(localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+</script>
 </body>
 </html>
