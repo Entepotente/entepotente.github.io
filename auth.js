@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider,
+  signInWithPopup, GoogleAuthProvider,
   sendEmailVerification, sendPasswordResetEmail, updateProfile, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -82,9 +82,7 @@ if (firebaseConfig.apiKey === "TU_API_KEY") /* sin configurar */ {
   });
 
   const providers = {
-    google: () => { const p = new GoogleAuthProvider(); p.setCustomParameters({ prompt: "select_account" }); return p; },
-    facebook: () => new FacebookAuthProvider(),
-    apple: () => { const p = new OAuthProvider("apple.com"); p.addScope("email"); p.addScope("name"); return p; }
+    google: () => { const p = new GoogleAuthProvider(); p.setCustomParameters({ prompt: "select_account" }); return p; }
   };
   document.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", async () => {
     try { await signInWithPopup(auth, providers[b.dataset.p]()); } catch (err) { fail(err); }
