@@ -1,87 +1,28 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beatcut · Portal para DJs, productores y amantes de la música</title><meta name="description" content="Herramientas, actualidad musical, rankings y guías para DJs, productores y todo el mundo de la música.">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<!-- ADSENSE: descomenta y pon tu ID cuando Google apruebe el sitio -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1052385977026732" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="style.css"></head>
-<body>
-<div class="wrap">
-  <nav class="top" aria-label="Principal">
-    <a href="index.html" aria-current="page">Inicio</a>
-    <a href="herramientas.html">Herramientas</a>
-    <a href="noticias.html">Actualidad</a>
-    <a href="tops.html">Tops</a>
-    <a href="guias.html">Guías</a>
-    <a href="publicidad.html">Anúnciate</a>
-    <button class="theme-toggle" id="themeBtn" type="button">🌙 Modo Claro/Oscuro</button>
-  </nav>
-
-  <header class="hero">
-    <p class="kicker">Portal para DJs, productores y creadores</p>
-    <!-- TÍTULO ESPECIAL BEATCUT CON EFECTO NEÓN SUTIL -->
-    <h1 class="hero-brand">BEATCUT</h1>
-    <p class="lead">Herramientas para DJs y productores, actualidad musical, rankings y guías prácticas en un solo lugar.</p>
-    
-    <div class="wave" aria-hidden="true" id="wave"></div>
-    
-    <a class="cta" href="herramientas.html">Ver herramientas</a>
-    <a class="cta alt" href="noticias.html">Leer actualidad</a>
-  </header>
-
-  <main>
-    <h2>Explora el portal</h2>
-    <div class="tiles">
-      <a class="tile" href="herramientas.html"><h3>Herramientas</h3><p>Calculadora de cortes, analizador de tonalidades y conversor de audio.</p><b>Abrir →</b></a>
-      <a class="tile" href="noticias.html"><h3>Actualidad</h3><p>Artistas, álbumes, festivales y clubs: lo que se mueve en la escena.</p><b>Abrir →</b></a>
-      <a class="tile" href="tops.html"><h3>Tops y playlists</h3><p>Rankings mundiales y listas para descubrir música.</p><b>Abrir →</b></a>
-      <a class="tile" href="guias.html"><h3>Guías</h3><p>Mezcla, producción, vídeo y promoción explicados paso a paso.</p><b>Abrir →</b></a>
-    </div>
-
-    <h2>Herramientas destacadas</h2>
-    <div class="tiles">
-      <a class="tile" href="herramientas.html"><h3>Calculadora de cortes por BPM</h3><p>Calcula cada cuántos segundos y fotogramas cortar. Incluye tap tempo.</p><b>Abrir →</b></a>
-      <a class="tile" href="herramientas.html#tonalidades"><h3>Analizador de tonalidades</h3><p>Sube tus canciones para obtener BPM y tonalidad, compáralas y filtra por compatibilidad.</p><b>Abrir →</b></a>
-      <a class="tile" href="herramientas.html#conversor"><h3>Conversor de audio</h3><p>Pasa tus canciones a WAV o MP3 sin subirlas a ningún servidor.</p><b>Abrir →</b></a>
-    </div>
-
-    <div class="ad"><small>Publicidad</small><ins class="adsbygoogle" data-ad-client="ca-pub-1052385977026732" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
-
-    <h2>Última hora</h2>
-    <div class="tiles">
-      <a class="tile" href="noticias.html"><h3>David Guetta, número 1 de DJ Mag</h3><p>Sexto título del DJ francés en el Top 100 DJs 2026.</p><b>Abrir →</b></a>
-      <a class="tile" href="noticias.html"><h3>Primavera Sound 2027</h3><p>Del 2 al 6 de junio en Barcelona, con entradas ya a la venta.</p><b>Abrir →</b></a>
-      <a class="tile" href="tops.html"><h3>Karol G, primera en Spotify</h3><p>«BbY WOW» recupera el número 1 del ranking global semanal.</p><b>Abrir →</b></a>
-    </div>
-  </main>
-
-  <script>
-    // Animación de la onda de audio
-    const w = document.getElementById('wave');
-    for(let i=0; i<48; i++){
-      const b = document.createElement('i');
-      b.style.setProperty('--i', i);
-      w.appendChild(b);
-    }
-
-    // Lógica del botón de Modo Oscuro / Claro
-    const btn = document.getElementById('themeBtn');
-    const currentTheme = localStorage.getItem('theme') || 'dark';
-    if(currentTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
-
-    btn.addEventListener('click', () => {
-      let theme = document.documentElement.getAttribute('data-theme');
-      if(theme === 'light') {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'dark');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-        localStorage.setItem('theme', 'light');
-      }
-    });
-  </script>
-
-  <footer>
-    <p>© Beatcut · <a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="contacto.html">Contacto</a></p>
-  </footer>
-</div>
-</body>
-</html>
+<script src="theme.js"></script>
+<link rel="stylesheet" href="style.css"></head><body><div class="wrap"><nav class="top" aria-label="Principal"><a href="index.html" aria-current="page">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a><button class="theme-toggle" id="themeBtn" type="button">Oscuro</button></nav>
+<header class="hero"><div class="wrap">
+<p class="kicker">Portal para DJs, productores y amantes de la música</p>
+<h1>Todo lo que necesitas para vivir la música</h1>
+<p>Herramientas para DJs y productores, actualidad musical, rankings y guías prácticas, reunidos en un mismo sitio.</p>
+<div class="wave" aria-hidden="true" id="wave"></div>
+<a class="cta" href="herramientas.html">Ver herramientas</a><a class="cta alt" href="noticias.html">Leer la actualidad</a>
+</div></header>
+<main class="wrap">
+<h2>Explora el portal</h2>
+<div class="tiles"><a class="tile" href="herramientas.html"><h3>Herramientas</h3><p>Calculadora de cortes, analizador de tonalidades y conversor de audio.</p><b>Abrir →</b></a><a class="tile" href="noticias.html"><h3>Actualidad</h3><p>Artistas, álbumes, festivales y clubs: lo que se mueve en la escena.</p><b>Abrir →</b></a><a class="tile" href="tops.html"><h3>Tops y playlists</h3><p>Rankings mundiales y de España, y listas para descubrir música.</p><b>Abrir →</b></a><a class="tile" href="guias.html"><h3>Guías</h3><p>Mezcla, producción, vídeo y promoción explicados paso a paso.</p><b>Abrir →</b></a></div>
+<h2>Herramientas destacadas</h2>
+<div class="tiles"><a class="tile" href="herramientas.html"><h3>Calculadora de cortes por BPM</h3><p>Calcula cada cuántos segundos y fotogramas cortar. Incluye tap tempo.</p><b>Abrir →</b></a><a class="tile" href="herramientas.html#tonalidades"><h3>Analizador de tonalidades</h3><p>Sube tus canciones para obtener BPM y tonalidad, compáralas y filtra por compatibilidad.</p><b>Abrir →</b></a><a class="tile" href="herramientas.html#conversor"><h3>Conversor de audio</h3><p>Pasa tus canciones a WAV o MP3 sin subirlas a ningún servidor.</p><b>Abrir →</b></a></div>
+<div class="ad"><small>Publicidad</small><ins class="adsbygoogle" data-ad-client="ca-pub-1052385977026732" data-ad-slot="0000000000" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
+<h2>Última hora</h2>
+<div class="tiles"><a class="tile" href="noticias.html"><h3>David Guetta, número 1 de DJ Mag</h3><p>Sexto título del DJ francés en el Top 100 DJs 2026.</p><b>Abrir →</b></a><a class="tile" href="noticias.html"><h3>Primavera Sound 2027</h3><p>Del 2 al 6 de junio en Barcelona, con entradas ya a la venta.</p><b>Abrir →</b></a><a class="tile" href="tops.html"><h3>Karol G, primera en Spotify</h3><p>«BbY WOW» recupera el número 1 del ranking global semanal.</p><b>Abrir →</b></a></div>
+<h2>Guías para todos</h2>
+<div class="tiles"><a class="tile" href="guias.html#dj"><h3>Para DJs</h3><p>Mezcla armónica, sets por energía y biblioteca ordenada.</p><b>Abrir →</b></a><a class="tile" href="guias.html#produccion"><h3>Para productores</h3><p>Máster, kick y bajo, estructura de club.</p><b>Abrir →</b></a><a class="tile" href="guias.html#video"><h3>Edición de vídeo</h3><p>Cortes al ritmo, zonas seguras y exportación para Reels y TikTok.</p><b>Abrir →</b></a><a class="tile" href="guias.html#promocion"><h3>Promoción</h3><p>Música con licencia y calendario de publicaciones.</p><b>Abrir →</b></a></div>
+</main>
+<script>const w=document.getElementById('wave');for(let i=0;i<48;i++){const b=document.createElement('i');b.style.setProperty('--i',i);w.appendChild(b)}</script>
+<footer><p>© Beatcut · <a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="contacto.html">Contacto</a></p></footer></div>
+<script>/*ANUNCIOS: quita este comentario tras la aprobación*/ /*try{document.querySelectorAll('.adsbygoogle').forEach(()=>(window.adsbygoogle=window.adsbygoogle||[]).push({}))}catch(e){}*/</script></body></html>

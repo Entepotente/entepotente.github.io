@@ -7,29 +7,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
 <link rel="stylesheet" href="style.css">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1052385977026732" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="wrap">
-<nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a><button class="theme-toggle" onclick="toggleTheme()" type="button">🌙 Modo Claro/Oscuro</button></nav>
+<nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a><button class="theme-toggle" id="themeBtn" type="button">Oscuro</button></nav>
 <h1>Contacto</h1>
 <p>¿Tienes una duda, una sugerencia de guía o quieres colaborar? Escríbenos y te respondemos en cuanto podamos.</p>
 <a class="btn" href="mailto:cutbeatcut@gmail.com">Escribir a cutbeatcut@gmail.com</a>
 <p style="font-size:.9rem"><a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a></p>
 </div>
-<script>
-function toggleTheme() {
-  let theme = document.documentElement.getAttribute('data-theme');
-  if(theme === 'light') {
-    document.documentElement.removeAttribute('data-theme');
-    localStorage.setItem('theme', 'dark');
-  } else {
-    document.documentElement.setAttribute('data-theme', 'light');
-    localStorage.setItem('theme', 'light');
-  }
-}
-if(localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
-</script>
 </body>
 </html>
