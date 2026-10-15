@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://entepotente.github.io/sitemap.xml
