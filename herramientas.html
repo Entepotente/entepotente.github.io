@@ -6,6 +6,277 @@
   <title>Herramientas · Beatcut</title>
   <meta name="description" content="Calculadora de BPM, puntos de corte y tonalidades para editar vídeos de DJ.">
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+  
+<!-- BEATCUT: CARGADOR DE AUDIO -->
+<div class="tool" id="audioTool">
+  <h3>🎵 Cargar archivos de audio</h3>
+  <p class="lead">
+    Importa tus canciones desde el ordenador y escúchalas
+    directamente en Beatcut. Los archivos no se suben a ningún servidor.
+  </p>
+
+  <label for="audioFiles">Seleccionar canciones</label>
+  <input
+    id="audioFiles"
+    type="file"
+    accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aiff,.aif"
+    multiple
+    style="width:100%;max-width:100%;margin:12px 0"
+  >
+
+  <div id="audioDrop" tabindex="0" role="button"
+       aria-label="Zona para arrastrar archivos de audio"
+       style="border:2px dashed #141414;border-radius:12px;
+       padding:28px 12px;text-align:center;background:#f4efe3;
+       margin:12px 0;cursor:pointer">
+    <strong>Arrastra tus canciones aquí</strong>
+    <p>MP3 · WAV · FLAC · M4A · AAC · OGG</p>
+    <small>También puedes hacer clic para seleccionarlas.</small>
+  </div>
+
+  <p id="audioStatus" class="out" aria-live="polite">
+    Todavía no has añadido canciones.
+  </p>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0">
+    <button type="button" id="audioPlayAll">▶ Reproducir primera</button>
+    <button type="button" id="audioClear">Vaciar lista</button>
+  </div>
+
+  <div id="audioList"></div>
+</div>
+
+<style>
+#audioTool .audio-item {
+  border: 2px solid #141414;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  background: #fffdf6;
+}
+#audioTool .audio-name {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+#audioTool .audio-meta {
+  font-size: .88rem;
+  color: #4f4a3f;
+  margin-bottom: 8px;
+}
+#audioTool audio {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}
+#audioTool .audio-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#audioTool .audio-actions button {
+  margin: 4px 0;
+}
+</style>
+
+<script>
+(() => {
+  const input = document.getElementById("audioFiles");
+  const drop = document.getElementById("audioDrop");
+  const list = document.getElementById("audioList");
+  const status = document.getElementById("audioStatus");
+  const playAll = document.getElementById("audioPlayAll");
+  const clear = document.getElementById("audioClear");
+
+  if (!input || !drop || !list || !status) return;
+
+  const tracks = [];
+  let nextId = 0;
+  let currentAudio = null;
+
+  const supportedExtensions =
+    /\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff|aif)$/i;
+
+  function formatTime(seconds) {
+    if (!Number.isFinite(seconds)) return "Duración desconocida";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function updateStatus() {
+    status.textContent = tracks.length
+      ? `${tracks.length} canción(es) cargada(s) en esta sesión.`
+      : "Todavía no has añadido canciones.";
+  }
+
+  function render() {
+    list.replaceChildren();
+
+    tracks.forEach(track => {
+      const card = document.createElement("div");
+      card.className = "audio-item";
+
+      const name = document.createElement("div");
+      name.className = "audio-name";
+      name.textContent = track.file.name;
+
+      const meta = document.createElement("div");
+      meta.className = "audio-meta";
+      meta.textContent =
+        `${(track.file.size / 1048576).toFixed(2)} MB · ` +
+        (track.duration === null
+          ? "Leyendo duración..."
+          : formatTime(track.duration));
+
+      const player = document.createElement("audio");
+      player.controls = true;
+      player.preload = "metadata";
+      player.src = track.url;
+
+      player.addEventListener("loadedmetadata", () => {
+        if (Number.isFinite(player.duration)) {
+          track.duration = player.duration;
+          meta.textContent =
+            `${(track.file.size / 1048576).toFixed(2)} MB · ` +
+            formatTime(track.duration);
+        } else {
+          meta.textContent =
+            `${(track.file.size / 1048576).toFixed(2)} MB · ` +
+            "Duración no disponible";
+        }
+      });
+
+      player.addEventListener("error", () => {
+        meta.textContent =
+          `${(track.file.size / 1048576).toFixed(2)} MB · ` +
+          "Formato no compatible con este navegador";
+      });
+
+      player.addEventListener("play", () => {
+        if (currentAudio && currentAudio !== player) {
+          currentAudio.pause();
+        }
+        currentAudio = player;
+      });
+
+      const actions = document.createElement("div");
+      actions.className = "audio-actions";
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "✕ Eliminar";
+      remove.setAttribute("aria-label", `Eliminar ${track.file.name}`);
+
+      remove.addEventListener("click", () => {
+        if (currentAudio === player) currentAudio = null;
+        URL.revokeObjectURL(track.url);
+        tracks.splice(tracks.indexOf(track), 1);
+        render();
+      });
+
+      actions.appendChild(remove);
+      card.append(name, meta, player, actions);
+      list.appendChild(card);
+    });
+
+    updateStatus();
+  }
+
+  function addFiles(files) {
+    const incoming = Array.from(files);
+    let added = 0;
+    let rejected = 0;
+
+    for (const file of incoming) {
+      if (!supportedExtensions.test(file.name)) {
+        rejected++;
+        continue;
+      }
+
+      // Evita duplicar el mismo archivo en la lista.
+      if (tracks.some(t =>
+        t.file.name === file.name &&
+        t.file.size === file.size &&
+        t.file.lastModified === file.lastModified
+      )) continue;
+
+      tracks.push({
+        id: ++nextId,
+        file,
+        url: URL.createObjectURL(file),
+        duration: null
+      });
+      added++;
+    }
+
+    render();
+
+    if (rejected) {
+      status.textContent =
+        `${added} añadida(s). ${rejected} archivo(s) ignorado(s) ` +
+        "por extensión no admitida.";
+    } else if (!added && incoming.length) {
+      status.textContent = "Esos archivos ya estaban en la lista.";
+    }
+  }
+
+  input.addEventListener("change", () => {
+    addFiles(input.files);
+    input.value = "";
+  });
+
+  drop.addEventListener("click", () => input.click());
+  drop.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      input.click();
+    }
+  });
+
+  ["dragenter", "dragover"].forEach(type => {
+    drop.addEventListener(type, event => {
+      event.preventDefault();
+      drop.style.background = "#c6f432";
+    });
+  });
+
+  ["dragleave", "drop"].forEach(type => {
+    drop.addEventListener(type, event => {
+      event.preventDefault();
+      drop.style.background = "#f4efe3";
+    });
+  });
+
+  drop.addEventListener("drop", event => {
+    addFiles(event.dataTransfer.files);
+  });
+
+  playAll.addEventListener("click", () => {
+    const first = list.querySelector("audio");
+    if (first) first.play().catch(() => {
+      status.textContent =
+        "No se ha podido reproducir. Pulsa el botón del reproductor.";
+    });
+  });
+
+  clear.addEventListener("click", () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    tracks.forEach(track => URL.revokeObjectURL(track.url));
+    tracks.length = 0;
+    render();
+  });
+
+  window.addEventListener("pagehide", () => {
+    tracks.forEach(track => URL.revokeObjectURL(track.url));
+  });
+})();
+</script>
+<!-- FIN DEL CARGADOR DE AUDIO -->
+
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1052385977026732" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://entepotente.github.io/style.css">
   <style>
