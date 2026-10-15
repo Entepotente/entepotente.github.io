@@ -12,7 +12,7 @@
 </head>
 <body>
 <div class="wrap">
-<nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a></nav>
+<nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a><button class="theme-toggle" onclick="toggleTheme()" type="button">🌙 Modo Claro/Oscuro</button></nav>
 <h1>Política de privacidad</h1>
 <p class="date">Última actualización: octubre de 2026</p>
 
@@ -45,5 +45,18 @@
 <h2>Cambios</h2>
 <p>Podemos actualizar esta política. La fecha de arriba indica la última revisión.</p>
 </div>
+<script>
+function toggleTheme() {
+  let theme = document.documentElement.getAttribute('data-theme');
+  if(theme === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+  }
+}
+if(localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+</script>
 </body>
 </html>
