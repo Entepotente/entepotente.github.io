@@ -49,3 +49,5 @@ th,td{text-align:left;padding:.65rem 1rem;border-bottom:2px solid var(--ink)}th{
 .ad{display:none!important}/* ANUNCIOS OCULTOS: borra esta línea tras la aprobación de AdSense */
 footer{border-top:3px solid var(--ink);margin-top:4rem;padding:2rem 0;color:var(--mute);font-size:.9rem}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.wave i{height:calc(20% + var(--i)*2%)}}
+.tool{overflow-x:auto}.tool table{min-width:520px;margin-top:.8rem}
+.c-ok,.c-mid,.c-no{display:inline-block;padding:.1rem .7rem;border:2px solid var(--ink);border-radius:999px;font-size:.85rem;font-weight:600}.c-ok{background:var(--lime)}.c-mid{background:var(--sky)}.c-no{background:#ffb4a0}
