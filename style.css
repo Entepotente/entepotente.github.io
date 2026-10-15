@@ -70,3 +70,20 @@ h2+.tiles{margin-top:0}
 /* Botón de tema */
 .theme-toggle{margin-left:.6rem;flex:none;background:none;border:1px solid rgba(244,239,227,.5);border-radius:999px;color:#f4efe3;font:600 .85rem Figtree,system-ui,sans-serif;padding:.3rem .9rem;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
 .theme-toggle:hover{background:var(--lime);border-color:var(--lime);color:var(--dark)}
+
+/* Cuenta / acceso */
+.auth-box{max-width:460px;background:var(--card);border:2px solid var(--line);border-radius:14px;box-shadow:6px 6px 0 var(--shd);padding:1.4rem 1.6rem;margin:1.4rem 6px 1.4rem 0}
+.auth-box[hidden],.field[hidden],.check[hidden],.linkbtn[hidden]{display:none}
+.field{display:block;font-weight:600;margin-bottom:.9rem}
+.field input{display:block;width:100%;margin-top:.3rem;font:inherit;padding:.6rem .7rem;border:2px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink)}
+.check{display:block;font-size:.9rem;margin-bottom:.9rem}
+.auth-box .btn{margin-top:.4rem;cursor:pointer;font:inherit;font-weight:700}
+.linkbtn{display:block;margin-top:.9rem;background:none;border:0;padding:0;font:inherit;font-size:.9rem;font-weight:600;color:var(--link);text-decoration:underline;cursor:pointer}
+.or{display:flex;align-items:center;gap:.8rem;margin:1.4rem 0 1rem;font-size:.85rem;color:var(--mute)}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+.social{display:grid;gap:.6rem}
+.social button{font:inherit;font-weight:600;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:.6rem 1rem;cursor:pointer;box-shadow:3px 3px 0 var(--shd)}
+.social button:hover{background:var(--lime);color:var(--dark)}
+.auth-box button:disabled{opacity:.5;cursor:not-allowed}
+.auth-msg{max-width:460px;font-weight:600;color:#c0392b}
+.auth-msg[data-ok="1"]{color:var(--link)}

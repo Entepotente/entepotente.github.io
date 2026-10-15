@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuenta · Beatcut</title><meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="style.css"></head><body><div class="wrap"><nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="herramientas.html">Herramientas</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="publicidad.html">Anúnciate</a><a href="cuenta.html" aria-current="page">Cuenta</a><button class="theme-toggle" id="themeBtn" type="button">Oscuro</button></nav>
+<h1>Tu cuenta</h1>
+<p class="lead">Entra o crea una cuenta para acceder a Beatcut con tu perfil.</p>
+
+<div class="auth-box" id="authForms">
+  <div class="chips" id="tabs" role="group" aria-label="Acción"><button type="button" data-m="login" aria-pressed="true">Entrar</button><button type="button" data-m="register" aria-pressed="false">Crear cuenta</button></div>
+  <form id="emailForm" novalidate>
+    <label class="field" id="nameRow" hidden>Nombre<input id="name" type="text" autocomplete="name" maxlength="60"></label>
+    <label class="field">Correo electrónico<input id="email" type="email" autocomplete="email" required></label>
+    <label class="field">Contraseña<input id="pass" type="password" autocomplete="current-password" minlength="8" required></label>
+    <label class="check" id="termsRow" hidden><input id="terms" type="checkbox"> He leído la <a href="privacidad.html">política de privacidad</a></label>
+    <button class="btn" id="submit" type="submit">Entrar</button>
+    <button class="linkbtn" id="forgot" type="button">¿Has olvidado la contraseña?</button>
+  </form>
+  <p class="or"><span>o continúa con</span></p>
+  <div class="social">
+    <button type="button" data-p="google">Google</button>
+    <button type="button" data-p="facebook">Facebook</button>
+    <button type="button" data-p="apple">Apple</button>
+  </div>
+</div>
+
+<div class="auth-box" id="account" hidden>
+  <h2 style="margin-top:0">Hola, <span id="who"></span></h2>
+  <p id="whoMail"></p><p class="date" id="verified"></p>
+  <button class="linkbtn" id="resend" type="button" hidden>Reenviar correo de verificación</button>
+  <button class="btn" id="logout" type="button">Cerrar sesión</button>
+</div>
+
+<p class="auth-msg" id="msg" role="status" aria-live="polite"></p>
+<script type="module" src="auth.js"></script>
+<footer><p>© Beatcut · <a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="contacto.html">Contacto</a></p></footer></div>
+</body></html>

@@ -1,0 +1,9 @@
+IMAGENES DE BEATCUT
+Pon aqui tus fotos con estos nombres exactos (JPG). Si falta alguna, la web muestra un degradado de colores.
+- hero.jpg            portada (1600x900)
+- noticias-1.jpg ... noticias-9.jpg   (600x400) en el orden de las tarjetas
+- tops-1.jpg, guias-1.jpg ... guias-5.jpg (600x400)
+Usa solo fotos tuyas o con licencia libre (Unsplash, Pexels, Pixabay, Wikimedia Commons). Las fotos de prensa de artistas y festivales suelen requerir permiso.
+Consejo: comprime cada foto a menos de 200 KB.
+
+Guías: guias-1.jpg ... guias-14.jpg (600x400), en el orden de las tarjetas.
