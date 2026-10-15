@@ -1,0 +1,27 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herramientas · Beatcut</title><meta name="description" content="Calculadora de BPM y puntos de corte para editar vídeos de DJ.">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<!-- ADSENSE: descomenta y pon tu ID cuando Google apruebe el sitio -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1052385977026732" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="style.css"></head><body><div class="wrap"><nav class="top" aria-label="Principal"><a href="index.html">Inicio</a><a href="noticias.html">Actualidad</a><a href="tops.html">Tops</a><a href="guias.html">Guías</a><a href="herramientas.html" aria-current="page">Herramientas</a><a href="publicidad.html">Anúnciate</a></nav>
+<h1>Herramientas</h1><p class="lead">Calcula dónde cortar para que tu edit vaya al ritmo.</p>
+<div class="tool"><h3>Calculadora de cortes por BPM</h3>
+<label>BPM <input id="bpm" type="number" min="60" max="220" value="128"></label>
+<label>Duración (s) <select id="dur"><option>15</option><option>30</option><option>60</option></select></label>
+<label>Fotogramas/s <select id="fps"><option>30</option><option>60</option></select></label>
+<button id="tap" type="button">Tap tempo</button>
+<table><tr><th>División</th><th>Cada (s)</th><th>Fotogramas</th><th>Cortes posibles</th></tr><tbody id="rows"></tbody></table>
+<p class="out" id="out"></p></div>
+<p class="lead">Consejo: coloca los cortes en el inicio de compás y los efectos fuertes en el drop.</p>
+<script>
+const $=id=>document.getElementById(id);
+function calc(){const b=+$("bpm").value,d=+$("dur").value,f=+$("fps").value;if(!(b>0))return;
+const beat=60/b,D=[["1 compás",4],["1/2 compás",2],["1 tiempo",1],["1/2 tiempo",.5]];
+$("rows").innerHTML=D.map(([n,k])=>{const s=beat*k;return"<tr><td>"+n+"</td><td>"+s.toFixed(3)+"</td><td>"+(s*f).toFixed(1)+"</td><td>"+Math.floor(d/s)+"</td></tr>"}).join("");
+$("out").textContent="A "+b+" BPM, "+d+" s equivalen a "+(d/(beat*4)).toFixed(1)+" compases."}
+["bpm","dur","fps"].forEach(i=>$(i).addEventListener("input",calc));
+let t=[];$("tap").addEventListener("click",()=>{const n=Date.now();t=t.filter(x=>n-x<3000);t.push(n);if(t.length>2){$("bpm").value=Math.round(60000/((t[t.length-1]-t[0])/(t.length-1)));calc()}});
+calc();
+</script>
+<footer><p>© Beatcut · <a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="contacto.html">Contacto</a></p></footer></div>
+<script>/*ANUNCIOS: quita este comentario tras la aprobación*/ /*try{document.querySelectorAll('.adsbygoogle').forEach(()=>(window.adsbygoogle=window.adsbygoogle||[]).push({}))}catch(e){}*/</script></body></html>
