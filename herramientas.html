@@ -132,4 +132,396 @@
     </div>
 
     <div id="pt" hidden>
-      <h4>
+      <h4>Comparación entre las canciones mostradas</h4>
+      <p class="hint">La diferencia de BPM se calcula como porcentaje respecto al tema de la primera columna. La compatibilidad armónica es una orientación, no una garantía de que la mezcla vaya a funcionar.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Par</th><th>Compatibilidad tonal</th><th>Dif. BPM</th></tr></thead>
+          <tbody id="pairs"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="pairNote"></p>
+    </div>
+  </section>
+
+  <section class="tool" id="conversor">
+    <h3>Conversor de formato de audio</h3>
+    <p class="lead">Convierte tus canciones a WAV o MP3. Los archivos no se suben a ningún servidor: todo se hace en tu navegador.</p>
+    <input id="cvFiles" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.aiff,.aif" multiple hidden>
+    <div id="cvDrop" class="drop" tabindex="0" role="button" aria-label="Seleccionar o arrastrar archivos de audio para convertir">
+      <strong>Arrastra tus canciones aquí o haz clic para elegirlas</strong>
+      <p>Admite los formatos que lea tu navegador (MP3, WAV, FLAC, M4A, AAC, OGG…)</p>
+    </div>
+    <label>Formato de salida
+      <select id="cvFmt"><option value="wav16">WAV 16 bits (sin pérdidas)</option><option value="wav24">WAV 24 bits (sin pérdidas)</option><option value="mp3">MP3</option></select>
+    </label>
+    <label id="cvBrWrap" hidden>Calidad MP3
+      <select id="cvBr"><option value="128">128 kbps</option><option value="192">192 kbps</option><option value="256" selected>256 kbps</option><option value="320">320 kbps</option></select>
+    </label>
+    <label>Frecuencia de muestreo
+      <select id="cvSr"><option value="44100">44,1 kHz</option><option value="48000">48 kHz</option></select>
+    </label>
+    <label>Canales
+      <select id="cvCh"><option value="orig">Mantener</option><option value="1">Mono</option></select>
+    </label>
+    <div class="bulk-actions"><button id="cvGo" type="button">Convertir</button><button id="cvClear" type="button">Vaciar lista</button></div>
+    <p class="hint">Convertir de MP3 u otro formato con pérdida a WAV no recupera calidad. Las etiquetas (título, artista, portada) no se conservan. Para MP3 se descarga el codificador lamejs desde un CDN externo (jsDelivr) la primera vez. Los archivos muy grandes pueden tardar o agotar la memoria del móvil.</p>
+    <div id="cvList" aria-live="polite"></div>
+  </section>
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+    const el = (t, x, c) => { const n = document.createElement(t); if (x != null) n.textContent = x; if (c) n.className = c; return n; };
+
+function wavBlob(chs,sr,bits){const n=chs[0].length,c=chs.length,bps=bits/8,data=n*c*bps,buf=new ArrayBuffer(44+data),v=new DataView(buf);
+const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+w(0,'RIFF');v.setUint32(4,36+data,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,c,true);v.setUint32(24,sr,true);v.setUint32(28,sr*c*bps,true);v.setUint16(32,c*bps,true);v.setUint16(34,bits,true);w(36,'data');v.setUint32(40,data,true);
+let o=44;for(let i=0;i<n;i++)for(let ch=0;ch<c;ch++){const s=Math.max(-1,Math.min(1,chs[ch][i]));
+if(bits===16){v.setInt16(o,Math.round(s<0?s*32768:s*32767),true);o+=2}else{const x=Math.round(s<0?s*8388608:s*8388607);v.setUint8(o,x&255);v.setUint8(o+1,(x>>8)&255);v.setUint8(o+2,(x>>16)&255);o+=3}}
+return new Blob([buf],{type:'audio/wav'})}
+
+    const LAME = ['lame.min.js','https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js','https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js'];
+    function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { s.remove(); rej(new Error(src)); }; document.head.appendChild(s); }); }
+    async function loadLame() { if (window.lamejs) return; for (const u of LAME) { try { await loadScript(u); if (window.lamejs) return; } catch (e) {} } throw new Error('No se ha podido cargar el codificador MP3. Comprueba tu conexión o usa WAV.'); }
+    async function mp3Blob(chs, sr, kbps) {
+      await loadLame();
+      const c = chs.length, enc = new lamejs.Mp3Encoder(c, sr, kbps), out = [], bs = 1152;
+      const toI = f => { const a = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); a[i] = s < 0 ? s * 32768 : s * 32767; } return a; };
+      const L = toI(chs[0]), R = c > 1 ? toI(chs[1]) : null;
+      for (let i = 0, k = 0; i < L.length; i += bs, k++) {
+        const b = c > 1 ? enc.encodeBuffer(L.subarray(i, i + bs), R.subarray(i, i + bs)) : enc.encodeBuffer(L.subarray(i, i + bs));
+        if (b.length) out.push(new Int8Array(b));
+        if (k % 200 === 0) await new Promise(r => setTimeout(r));
+      }
+      const e = enc.flush(); if (e.length) out.push(new Int8Array(e));
+      return new Blob(out, {type: 'audio/mpeg'});
+    }
+    const EXT = /\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff|aif)$/i, items = []; let busy = false;
+    function render() {
+      const box = $('cvList'); box.replaceChildren();
+      items.forEach(it => {
+        const d = el('div', null, 'log'); d.appendChild(el('span', `${it.f.name} → ${it.msg} `));
+        if (it.url) { const a = el('a', 'Descargar'); a.href = it.url; a.download = it.out; d.appendChild(a); }
+        box.appendChild(d);
+      });
+    }
+    function drop(list) {
+      let rejected = 0;
+      for (const f of list) { if (EXT.test(f.name) || f.type.startsWith('audio/')) items.push({f, msg: 'pendiente', url: null, out: ''}); else rejected++; }
+      render(); if (rejected) $('cvList').appendChild(el('div', `${rejected} archivo(s) ignorado(s) por no ser audio.`, 'log'));
+    }
+    async function convert(it) {
+      const sr = +$('cvSr').value, fmt =$('cvFmt').value, Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const ab = await new Ctx(2, 1, sr).decodeAudioData(await it.f.arrayBuffer());
+      let chs = []; for (let c = 0; c < ab.numberOfChannels; c++) chs.push(ab.getChannelData(c));
+      if ($('cvCh').value === '1') { const m = new Float32Array(ab.length); for (const d of chs) for (let i = 0; i < m.length; i++) m[i] += d[i] / chs.length; chs = [m]; } else chs = chs.slice(0, 2);
+      const blob = fmt === 'mp3' ? await mp3Blob(chs, sr, +$('cvBr').value) : wavBlob(chs, sr, fmt === 'wav24' ? 24 : 16);
+      if (it.url) URL.revokeObjectURL(it.url);
+      it.url = URL.createObjectURL(blob); it.out = it.f.name.replace(/\.[^.]+$/, '') + (fmt === 'mp3' ? '.mp3' : '.wav');
+      it.msg = `listo (${(blob.size / 1048576).toFixed(1)} MB)`;
+    }
+    async function run() {
+      if (busy) return; busy = true;
+      for (const it of items) {
+        it.msg = 'convirtiendo…'; render(); await new Promise(r => setTimeout(r, 30));
+        try { if (it.f.size > 150 * 1048576) throw new Error('archivo demasiado grande (máx. 150 MB)'); await convert(it); }
+        catch (e) { it.msg = 'error: ' + (e && e.message && e.message.length < 120 ? e.message : 'formato no compatible o archivo dañado'); }
+        render();
+      }
+      busy = false;
+    }
+    const inp = $('cvFiles'), dz =$('cvDrop');
+    inp.addEventListener('change', () => { drop(Array.from(inp.files)); inp.value = ''; });
+    dz.addEventListener('click', () => inp.click());
+    dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } });
+    ['dragenter','dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('on'); }));
+    ['dragleave','drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('on'); }));
+    dz.addEventListener('drop', e => drop(Array.from(e.dataTransfer.files)));
+    $('cvFmt').addEventListener('input', () => { $('cvBrWrap').hidden =$('cvFmt').value !== 'mp3'; });
+    $('cvGo').addEventListener('click', () => { if (!items.length) {$('cvList').textContent = 'Añade primero algún archivo de audio.'; return; } run(); });
+    $('cvClear').addEventListener('click', () => { items.forEach(i => i.url && URL.revokeObjectURL(i.url)); items.splice(0, items.length); render(); });
+    render();
+  })();
+  </script>
+
+  <p class="lead">Consejo: coloca los cortes en el inicio de compás y los efectos fuertes en el drop.</p>
+  <footer><p>© Beatcut · <a href="privacidad.html">Privacidad</a> · <a href="#" onclick="try{googlefc.callbackQueue.push(googlefc.showRevocationMessage)}catch(e){}return false">Privacy and cookie settings</a> · <a href="contacto.html">Contacto</a></p></footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const el = (tag, value, cls) => { const n = document.createElement(tag); if (value != null) n.textContent = value; if (cls) n.className = cls; return n; };
+
+function fftInPlace(re,im){const n=re.length;
+for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}}
+for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);
+for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const a=i+k,b=a+len/2,xr=re[b]*cr-im[b]*ci,xi=re[b]*ci+im[b]*cr;re[b]=re[a]-xr;im[b]=im[a]-xi;re[a]+=xr;im[a]+=xi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t}}}}
+const KP_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88],KP_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+function corr(a,b){let ma=0,mb=0;for(let i=0;i<12;i++){ma+=a[i];mb+=b[i]}ma/=12;mb/=12;let s=0,va=0,vb=0;for(let i=0;i<12;i++){const p=a[i]-ma,q=b[i]-mb;s+=p*q;va+=p*p;vb+=q*q}return s/Math.sqrt(va*vb||1)}
+function analyzeKey(x,sr){const N=16384,hop=8192,re=new Float64Array(N),im=new Float64Array(N),win=new Float64Array(N),ch=new Float64Array(12),mag=new Float64Array(N/2);
+for(let i=0;i<N;i++)win[i]=.5-.5*Math.cos(2*Math.PI*i/(N-1));
+const lo=Math.ceil(65*N/sr),hi=Math.floor(1100*N/sr);
+for(let s=0;s+N<=x.length;s+=hop){for(let i=0;i<N;i++){re[i]=x[s+i]*win[i];im[i]=0}fftInPlace(re,im);
+let mx=0;for(let b=lo-1;b<=hi+1;b++){mag[b]=Math.hypot(re[b],im[b]);if(mag[b]>mx)mx=mag[b]}
+for(let b=lo;b<=hi;b++)if(mag[b]>mag[b-1]&&mag[b]>=mag[b+1]&&mag[b]>.05*mx){const pc=((Math.round(12*Math.log2(b*sr/N/440)+69)%12)+12)%12;ch[pc]+=Math.sqrt(mag[b])}}
+let tot=0;for(let i=0;i<12;i++)tot+=ch[i];if(!tot)return null;
+let best=-2,res=null;for(let t=0;t<12;t++){const r=[];for(let i=0;i<12;i++)r.push(ch[(t+i)%12]);
+for(const [prof,minor] of [[KP_MAJ,false],[KP_MIN,true]]){const c=corr(r,prof);if(c>best){best=c;res={pc:t,minor}}}}
+const pc=res.minor?(res.pc+3)%12:res.pc;return{n:(7+(pc*7)%12)%12+1,l:res.minor?'A':'B'}}
+function analyzeBpm(x,sr){const hop=256,fr=sr/hop,nf=Math.floor(x.length/hop);if(nf<400)return null;
+const a=Math.exp(-2*Math.PI*150/sr),lowE=new Float64Array(nf),hiE=new Float64Array(nf);let y=0,p=0;
+for(let f=0;f<nf;f++){let l=0,h=0;for(let i=0;i<hop;i++){const s=x[f*hop+i];y=(1-a)*s+a*y;l+=y*y;const d=s-p;p=s;h+=d*d}lowE[f]=Math.log(1+1e4*l/hop);hiE[f]=Math.log(1+1e4*h/hop)}
+const norm=e=>{let s=0;const o=new Float64Array(nf);for(let f=1;f<nf;f++){o[f]=Math.max(0,e[f]-e[f-1]);s+=o[f]}const m=s/nf||1;for(let f=0;f<nf;f++)o[f]/=m;return o};
+const ol=norm(lowE),oh=norm(hiE),on=new Float64Array(nf);let mean=0;for(let f=0;f<nf;f++){on[f]=ol[f]+.5*oh[f];mean+=on[f]}mean/=nf;for(let f=0;f<nf;f++)on[f]-=mean;
+const maxLag=Math.ceil(4*fr*60/70)+3,ac=new Float64Array(maxLag);
+for(let l=0;l<maxLag;l++){let s=0;for(let f=l;f<nf;f++)s+=on[f]*on[f-l];ac[l]=s/(nf-l)}
+if(!(ac[0]>0))return null;
+const g=l=>{const i=Math.floor(l),t=l-i;return i+1<maxLag?(ac[i]*(1-t)+ac[i+1]*t)/ac[0]:0};
+let best=0,bs=-1e9;for(let b=70;b<=180;b+=.25){const lag=fr*60/b;let s=g(lag)+.6*g(2*lag)+.4*g(3*lag)+.3*g(4*lag);s*=Math.exp(-.5*Math.pow(Math.log2(b/125)/.9,2));if(s>bs){bs=s;best=b}}
+return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/10}
+
+  const MAJ = ['B','F#','Db','Ab','Eb','Bb','F','C','G','D','A','E'];
+  const MIN = ['Abm','Ebm','Bbm','Fm','Cm','Gm','Dm','Am','Em','Bm','F#m','C#m'];
+  const PC = {c:0,d:2,e:4,f:5,g:7,a:9,b:11,do:0,re:2,mi:4,fa:5,sol:7,la:9,si:11};
+  const ES = {C:'Do',D:'Re',E:'Mi',F:'Fa',G:'Sol',A:'La',B:'Si'};
+
+  function parseKey(input) {
+    const t = input.trim().toLowerCase().replaceAll('♯','#').replaceAll('♭','b');
+    let m = t.match(/^(\d{1,2})\s*([ab])$/);
+    if (m) { const n = +m[1]; return n >= 1 && n <= 12 ? {n, l:m[2].toUpperCase()} : null; }
+    m = t.match(/^(\d{1,2})\s*([dm])$/);
+    if (m) { const n = +m[1]; return n >= 1 && n <= 12 ? {n:(n+6)%12+1, l:m[2]==='d'?'B':'A'} : null; }
+    m = t.match(/^(sol|do|re|mi|fa|la|si|[a-g])\s*([#b]?)\s*(m|min|minor|menor|maj|major|mayor)?$/);
+    if (!m) return null;
+    let pc = (PC[m[1]] + (m[2]==='#' ? 1 : m[2]==='b' ? -1 : 0) + 12) % 12;
+    const minor = /^(m|min|minor|menor)$/.test(m[3] || '');
+    if (minor) pc = (pc + 3) % 12;
+    return {n:(7 + (pc*7)%12)%12 + 1, l:minor?'A':'B'};
+  }
+  const keyName = k => k.l === 'B' ? MAJ[k.n-1] : MIN[k.n-1];
+  const camelot = k => `${k.n}${k.l}`;
+  const openKey = k => `${((k.n-8+12)%12)+1}${k.l==='B'?'d':'m'}`;
+  const spanishKey = k => {
+    const s = keyName(k), minor = s.endsWith('m'), root = minor ? s.slice(0,-1) : s;
+    return (ES[root[0]] || root[0]) + (root[1] ? (root[1]==='#'?'♯':'♭') : '') + (minor?' menor':' mayor');
+  };
+  const compatibleKeys = k => {
+    const o = k.l === 'A' ? 'B' : 'A', dn = n => (n+10)%12+1, up = n => n%12+1;
+    return [`${k.n}${k.l}`, `${dn(k.n)}${k.l}`, `${up(k.n)}${k.l}`, `${k.n}${o}`, `${up(up(k.n))}${k.l}`];
+  };
+  function relation(a, b) {
+    const d = (b.n-a.n+12)%12;
+    if (d === 0) return ['c-ok', a.l===b.l ? 'Misma tonalidad' : 'Relativa mayor/menor'];
+    if (a.l === b.l) {
+      if (d === 1 || d === 11) return ['c-ok','Mezcla suave (±1 Camelot)'];
+      if (d === 2) return ['c-mid','Sube energía (+2)'];
+      if (d === 10) return ['c-mid','Baja energía (−2)'];
+    }
+    return ['c-no','Poco compatible'];
+  }
+
+  const songs = [];
+  let nextId = 0;
+  const make = (t, k, b, src) => ({id:++nextId, t, k, b:b||0, src});
+  const pushSongs = list => { songs.push(...list); if (songs.length > 50) songs.splice(0, songs.length-50); };
+
+  const fKey = $('fKey');
+  fKey.appendChild(Object.assign(el('option','Todas'),{value:''}));
+  for (let n=1;n<=12;n++) for (const l of ['A','B']) fKey.appendChild(Object.assign(el('option',`${n}${l} · ${l==='A'?MIN[n-1]:MAJ[n-1]}`),{value:`${n}${l}`}));
+
+  function refreshRef() {
+    const ref = $('fRef'), prev = ref.value;
+    ref.replaceChildren(Object.assign(el('option','— ninguna —'),{value:''}));
+    songs.forEach(s => ref.appendChild(Object.assign(el('option',s.t.slice(0,40)),{value:String(s.id)})));
+    ref.value = songs.some(s => String(s.id) === prev) ? prev : '';
+  }
+
+  function visible() {
+    const q = $('fName').value.trim().toLowerCase(), mn = +$('fMin').value || 0, mx = +$('fMax').value \vert{}\vert{} 0, kk =$('fKey').value;
+    let r = songs.filter(s => (!q || s.t.toLowerCase().includes(q)) && (!mn || s.b >= mn) && (!mx || (s.b && s.b <= mx)) && (!kk || camelot(s.k) === kk));
+    const ref = songs.find(s => String(s.id) === $('fRef').value), fc =$('fComp').value;
+    if (ref && fc) r = r.filter(s => s !== ref && relation(ref.k, s.k)[0] === 'c-' + fc);
+    const so = $('fSort').value;
+    if (so === 'name') r.sort((a,b) => a.t.localeCompare(b.t,'es'));
+    else if (so === 'bpmUp') r.sort((a,b) => a.b - b.b);
+    else if (so === 'bpmDown') r.sort((a,b) => b.b - a.b);
+    else if (so === 'key') r.sort((a,b) => a.k.n - b.k.n || a.k.l.localeCompare(b.k.l));
+    return r;
+  }
+
+  function refresh() { refreshRef(); draw(); }
+
+  function draw() {
+    const shown = visible(), tbody = $('songs');
+    tbody.replaceChildren();
+    shown.forEach(s => {
+      const row = el('tr');
+      row.appendChild(el('td', s.t));
+
+      const kc = el('td'), ki = el('input'); ki.type='text'; ki.value=keyName(s.k); ki.maxLength=16; ki.setAttribute('aria-label',`Tonalidad de ${s.t}`);
+      ki.addEventListener('change', () => { const k = parseKey(ki.value); if (k) { s.k = k; s.src = 'manual'; refresh(); } else { $('kmsg').textContent = 'No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; ki.value = keyName(s.k); } });
+      kc.appendChild(ki); row.appendChild(kc);
+      row.appendChild(el('td', camelot(s.k)));
+      row.appendChild(el('td', openKey(s.k)));
+
+      const bc = el('td'), bi = el('input'); bi.type='number'; bi.min=1; bi.max=300; bi.step='any'; bi.value=s.b||''; bi.setAttribute('aria-label',`BPM de ${s.t}`);
+      bi.addEventListener('change', () => { s.b = +bi.value || 0; s.src = 'manual'; draw(); });
+      bc.appendChild(bi);
+      [['½',.5],['×2',2]].forEach(([txt,f]) => { const b = el('button',txt,'mini'); b.type='button'; b.setAttribute('aria-label',`${txt} BPM de ${s.t}`); b.addEventListener('click', () => { if (s.b) { s.b = Math.round(s.b*f*10)/10; s.src='manual'; draw(); } }); bc.appendChild(b); });
+      row.appendChild(bc);
+
+      row.appendChild(el('td', s.src === 'auto' ? 'Análisis' : 'Manual'));
+      row.appendChild(el('td', compatibleKeys(s.k).slice(0,4).join(', ')));
+      const ac = el('td'), rm = el('button','✕'); rm.type='button'; rm.setAttribute('aria-label',`Quitar ${s.t}`);
+      rm.addEventListener('click', () => { songs.splice(songs.indexOf(s),1); refresh(); });
+      ac.appendChild(rm); row.appendChild(ac);
+      tbody.appendChild(row);
+    });
+
+    const pairs = $('pairs'); pairs.replaceChildren();
+    let okCount = 0, total = 0, rendered = 0;
+    for (let i=0;i<shown.length;i++) for (let j=i+1;j<shown.length;j++) {
+      const a = shown[i], b = shown[j], r = relation(a.k,b.k);
+      total++; if (r[0]==='c-ok') okCount++;
+      if (rendered < 300) {
+        const row = el('tr'), rc = el('td');
+        row.appendChild(el('td', `${a.t} ↔ ${b.t}`));
+        rc.appendChild(el('span', r[1], r[0])); row.appendChild(rc);
+        row.appendChild(el('td', a.b && b.b ? `${(Math.abs(b.b-a.b)/a.b*100).toFixed(1)} %` : '–'));
+        pairs.appendChild(row); rendered++;
+      }
+    }
+    $('pt').hidden = shown.length < 2;
+    $('pairNote').textContent = total > rendered ? `Se muestran ${rendered} de ${total} parejas. Usa los filtros para acotar.` : '';
+    $('summary').hidden = songs.length === 0;
+    $('count').textContent = songs.length ? ` Mostrando ${shown.length} de ${songs.length} canciones.` : '';
+    if (songs.length) $('summary').textContent = `${shown.length} canciones mostradas · ${total} parejas comparadas · ${okCount} con compatibilidad tonal favorable.`;
+  }
+
+  ['fName','fMin','fMax','fKey','fComp','fSort'].forEach(id => $(id).addEventListener('input', draw));$('fRef').addEventListener('input', draw);
+  $('fClear').addEventListener('click', () => { ['fName','fMin','fMax','fKey','fRef','fComp','fSort'].forEach(id =>$(id).value=''); draw(); });
+
+  $('key').addEventListener('input', () => {
+    const k = parseKey($('key').value);$('kprev').textContent = k ? `= ${keyName(k)} (${spanishKey(k)}) · Camelot ${camelot(k)} · Open Key ${openKey(k)} · Compatibles: ${compatibleKeys(k).slice(0,4).join(', ')}` : '';
+  });
+  $('add').addEventListener('click', () => {
+    const k = parseKey($('key').value);
+    if (!k) { $('kmsg').textContent = 'No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; return; }
+    $('kmsg').textContent = '';
+    pushSongs([make($('title').value.trim() || `Canción ${songs.length+1}`, k, +$('kbpm').value, 'manual')]);
+    refresh();
+    ['title','key','kbpm'].forEach(id => $(id).value = '');$('kprev').textContent = '';
+  });
+
+  function parseBulk(text) {
+    const accepted = [], rejected = [];
+    text.split(/\r?\n/).forEach((line, index) => {
+      const trimmed = line.trim(); if (!trimmed) return;
+      const parts = (trimmed.includes('\t') ? trimmed.split('\t') : trimmed.includes(';') ? trimmed.split(';') : trimmed.includes('|') ? trimmed.split('|') : trimmed.split(',')).map(x => x.trim());
+      let title = parts[0] || `Canción ${index+1}`, keyText = '', bpm = 0;
+      const num = s => Number((s||'').replace(/[^\d.]/g,'')) || 0;
+      if (parts.length >= 2) {
+        if (parseKey(parts[1])) { keyText = parts[1]; bpm = num(parts[2]); }
+        else if (parts.length >= 3 && parseKey(parts[2])) { keyText = parts[2]; bpm = num(parts[1]); }
+      } else {
+        const km = trimmed.match(/(?:^|\s)(\d{1,2}\s*[ABab]|[A-Ga-g](?:#|b)?\s*(?:m|min|minor|menor|maj|major|mayor)?)(?:\s|$)/);
+        if (km) {
+          keyText = km[1];
+          title = trimmed.replace(km[0],' ').replace(/\b\d{2,3}(?:\.\d+)?\s*BPM\b/i,'').trim() || title;
+          const bm = trimmed.match(/\b(\d{2,3}(?:\.\d+)?)\s*BPM\b/i); bpm = bm ? Number(bm[1]) : 0;
+        }
+      }
+      const key = parseKey(keyText);
+      if (!key) rejected.push(`Línea ${index+1}: no se reconoce la tonalidad (${trimmed})`);
+      else accepted.push(make(title.slice(0,100), key, bpm, 'manual'));
+    });
+    return {accepted, rejected};
+  }
+  function importBulk(replace) {
+    const r = parseBulk($('bulk').value);
+    if (replace) songs.splice(0, songs.length);
+    pushSongs(r.accepted); refresh();
+    let msg = `Añadidas ${r.accepted.length} canciones válidas. Total en la lista: ${songs.length}.`;
+    if (r.rejected.length) msg += `\nNo se han añadido ${r.rejected.length} líneas:\n${r.rejected.slice(0,8).join('\n')}${r.rejected.length>8?'\n…':''}`;
+    if (!r.accepted.length && !r.rejected.length) msg = 'Pega primero una lista de canciones.';
+    $('bulkMsg').textContent = msg;
+  }
+  $('bulkAdd').addEventListener('click', () => importBulk(false));
+  $('bulkReplace').addEventListener('click', () => importBulk(true));$('clear').addEventListener('click', () => { songs.splice(0, songs.length); refresh(); $('audioLog').replaceChildren();$('bulkMsg').textContent = 'Lista vaciada.'; });
+
+  const SR = 22050, EXT = /\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff|aif)$/i;
+  async function analyzeFile(file) {
+    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const ab = await new Ctx(1, 1, SR).decodeAudioData(await file.arrayBuffer());
+    const n = ab.length, ch = ab.numberOfChannels, len = Math.min(n, 90*SR), st = Math.max(0, Math.floor(n/2 - len/2));
+    const x = new Float32Array(len);
+    for (let c=0;c<ch;c++) { const d = ab.getChannelData(c); for (let i=0;i<len;i++) x[i] += d[st+i]/ch; }
+    return {k: analyzeKey(x,SR), b: analyzeBpm(x,SR)};
+  }
+  const queue = []; let busy = false;
+  async function runQueue() {
+    if (busy) return; busy = true;
+    while (queue.length) {
+      const f = queue.shift(), line = el('div', `⏳ ${f.name}: analizando…`, 'log'); $('audioLog').appendChild(line);
+      await new Promise(r => setTimeout(r, 30));
+      try {
+        const r = await analyzeFile(f);
+        if (!r.k) throw new Error('sin tonalidad');
+        pushSongs([make(f.name.replace(/\.[^.]+$/,''), r.k, r.b, 'auto')]); refresh();
+        line.textContent = `✔ ${f.name}: ${keyName(r.k)} · ${camelot(r.k)} · ${r.b ? r.b + ' BPM' : 'BPM no detectado'}`;
+      } catch (e) {
+        line.textContent = `✖ ${f.name}: no se ha podido analizar (formato no compatible o archivo dañado).`;
+      }
+    }
+    busy = false;
+  }
+  function addFiles(files) {
+    let rejected = 0;
+    for (const f of files) { if (EXT.test(f.name) || f.type.startsWith('audio/')) queue.push(f); else rejected++; }
+    if (rejected) $('audioLog').appendChild(el('div', `${rejected} archivo(s) ignorado(s) por no ser audio.`, 'log'));
+    runQueue();
+  }
+  const input = $('audioFiles'), drop =$('audioDrop');
+  input.addEventListener('change', () => { addFiles(Array.from(input.files)); input.value = ''; });
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  ['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('on'); }));
+  ['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('on'); }));
+  drop.addEventListener('drop', e => addFiles(Array.from(e.dataTransfer.files)));
+
+  function calcCuts() {
+    const bpm = +$('bpm').value, dur = +$('dur').value, fps = +$('fps').value;
+    if (!(bpm > 0)) return;
+    const beat = 60/bpm;
+    $('rows').replaceChildren();
+    [['1 compás',4],['1/2 compás',2],['1 tiempo',1],['1/2 tiempo',.5]].forEach(([name,beats]) => {
+      const s = beat*beats, row = el('tr');
+      [name, s.toFixed(3), (s*fps).toFixed(1), String(Math.floor(dur/s))].forEach(v => row.appendChild(el('td', v)));
+      $('rows').appendChild(row);
+    });
+    $('out').textContent = `A ${bpm} BPM, ${dur} s equivalen a ${(dur/(beat*4)).toFixed(1)} compases.`;
+  }
+  ['bpm','dur','fps'].forEach(id => $(id).addEventListener('input', calcCuts));
+  let taps = [];
+  $('tap').addEventListener('click', () => {
+    const now = Date.now(); taps = taps.filter(t => now-t < 3000); taps.push(now);
+    if (taps.length > 2) { $('bpm').value = Math.round(60000/((taps[taps.length-1]-taps[0])/(taps.length-1))); calcCuts(); }
+  });
+  calcCuts(); refresh();
+})();
+
+function toggleTheme() {
+  let theme = document.documentElement.getAttribute('data-theme');
+  if(theme === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+  }
+}
+if(localStorage.getItem('theme') === 'light') document.documentElement.setAttribute('data-theme', 'light');
+</script>
+</body>
+</html>
