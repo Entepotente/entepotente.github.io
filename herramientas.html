@@ -20,9 +20,9 @@
     .tool td button.mini { padding:.1rem .45rem; font-size:.8rem; }
     .hint { opacity:.8; font-size:.92rem; }
     .bulk-actions { display:flex; flex-wrap:wrap; gap:.4rem; margin:.6rem 0; }
-    .summary { padding:.75rem; border:1px solid var(--border-color); border-radius:10px; margin:.75rem 0; background:var(--input-bg); }
+    .summary { padding:.75rem; border:2px solid var(--border-color); border-radius:10px; margin:.75rem 0; background:var(--card-bg); }
     .log { font-size:.9rem; margin:.4rem 0; overflow-wrap:anywhere; }
-    .filters { border:1px solid var(--border-color); border-radius:12px; padding:.7rem 1rem; margin:1rem 0; background:var(--card-bg); }
+    .filters { border:2px solid var(--border-color); border-radius:10px; padding:.7rem 1rem; margin:1rem 0; background:var(--card-bg); }
     .filters summary { cursor:pointer; font-weight:700; }
     .filters .grid { display:flex; flex-wrap:wrap; gap:.4rem 1rem; margin-top:.8rem; }
   </style>
@@ -168,6 +168,7 @@
     <p class="hint">Convertir de MP3 u otro formato con pérdida a WAV no recupera calidad. Las etiquetas (título, artista, portada) no se conservan. Para MP3 se descarga el codificador lamejs desde un CDN externo (jsDelivr) la primera vez. Los archivos muy grandes pueden tardar o agotar la memoria del móvil.</p>
     <div id="cvList" aria-live="polite"></div>
   </section>
+
   <script>
   (() => {
     const $ = id => document.getElementById(id);
@@ -182,7 +183,7 @@ return new Blob([buf],{type:'audio/wav'})}
 
     const LAME = ['lame.min.js','https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js','https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js'];
     function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { s.remove(); rej(new Error(src)); }; document.head.appendChild(s); }); }
-    async function loadLame() { if (window.lamejs) return; for (const u of LAME) { try { await loadScript(u); if (window.lamejs) return; } catch (e) {} } throw new Error('No se ha podido cargar el codificador MP3. Comprueba tu conexión o usa WAV.'); }
+    async function loadLame() { if (window.lamejs) return; for (const u of LAME) { try { await loadScript(u); if (window.lamejs) return; } catch (e) {} } throw new Error('No se ha podido cargar el codificador MP3.'); }
     async function mp3Blob(chs, sr, kbps) {
       await loadLame();
       const c = chs.length, enc = new lamejs.Mp3Encoder(c, sr, kbps), out = [], bs = 1152;
@@ -224,8 +225,8 @@ return new Blob([buf],{type:'audio/wav'})}
       if (busy) return; busy = true;
       for (const it of items) {
         it.msg = 'convirtiendo…'; render(); await new Promise(r => setTimeout(r, 30));
-        try { if (it.f.size > 150 * 1048576) throw new Error('archivo demasiado grande (máx. 150 MB)'); await convert(it); }
-        catch (e) { it.msg = 'error: ' + (e && e.message && e.message.length < 120 ? e.message : 'formato no compatible o archivo dañado'); }
+        try { if (it.f.size > 150 * 1048576) throw new Error('archivo demasiado grande'); await convert(it); }
+        catch (e) { it.msg = 'error'; }
         render();
       }
       busy = false;
@@ -360,7 +361,7 @@ return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/1
       row.appendChild(el('td', s.t));
 
       const kc = el('td'), ki = el('input'); ki.type='text'; ki.value=keyName(s.k); ki.maxLength=16; ki.setAttribute('aria-label',`Tonalidad de ${s.t}`);
-      ki.addEventListener('change', () => { const k = parseKey(ki.value); if (k) { s.k = k; s.src = 'manual'; refresh(); } else { $('kmsg').textContent = 'No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; ki.value = keyName(s.k); } });
+      ki.addEventListener('change', () => { const k = parseKey(ki.value); if (k) { s.k = k; s.src = 'manual'; refresh(); } else { $('kmsg').textContent = 'No reconozco esa tonalidad.'; ki.value = keyName(s.k); } });
       kc.appendChild(ki); row.appendChild(kc);
       row.appendChild(el('td', camelot(s.k)));
       row.appendChild(el('td', openKey(s.k)));
@@ -393,22 +394,21 @@ return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/1
       }
     }
     $('pt').hidden = shown.length < 2;
-    $('pairNote').textContent = total > rendered ? `Se muestran ${rendered} de ${total} parejas. Usa los filtros para acotar.` : '';
+    $('pairNote').textContent = total > rendered ? `Se muestran ${rendered} de ${total} parejas.` : '';
     $('summary').hidden = songs.length === 0;
     $('count').textContent = songs.length ? ` Mostrando ${shown.length} de ${songs.length} canciones.` : '';
-    if (songs.length) $('summary').textContent = `${shown.length} canciones mostradas · ${total} parejas comparadas · ${okCount} con compatibilidad tonal favorable.`;
+    if (songs.length) $('summary').textContent = `${shown.length} canciones mostradas · ${total} parejas comparadas · ${okCount} compatibles.`;
   }
 
   ['fName','fMin','fMax','fKey','fComp','fSort'].forEach(id => $(id).addEventListener('input', draw));$('fRef').addEventListener('input', draw);
   $('fClear').addEventListener('click', () => { ['fName','fMin','fMax','fKey','fRef','fComp','fSort'].forEach(id =>$(id).value=''); draw(); });
 
   $('key').addEventListener('input', () => {
-    const k = parseKey($('key').value);$('kprev').textContent = k ? `= ${keyName(k)} (${spanishKey(k)}) · Camelot ${camelot(k)} · Open Key ${openKey(k)} · Compatibles: ${compatibleKeys(k).slice(0,4).join(', ')}` : '';
+    const k = parseKey($('key').value);$('kprev').textContent = k ? `= ${keyName(k)} (${spanishKey(k)}) · Camelot ${camelot(k)} · Open Key ${openKey(k)}` : '';
   });
   $('add').addEventListener('click', () => {
     const k = parseKey($('key').value);
-    if (!k) { $('kmsg').textContent = 'No reconozco esa tonalidad. Prueba con 8A, Am, F#m o La menor.'; return; }
-    $('kmsg').textContent = '';
+    if (!k) { $('kmsg').textContent = 'No reconozco esa tonalidad.'; return; }$('kmsg').textContent = '';
     pushSongs([make($('title').value.trim() || `Canción ${songs.length+1}`, k, +$('kbpm').value, 'manual')]);
     refresh();
     ['title','key','kbpm'].forEach(id => $(id).value = '');$('kprev').textContent = '';
@@ -433,7 +433,7 @@ return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/1
         }
       }
       const key = parseKey(keyText);
-      if (!key) rejected.push(`Línea ${index+1}: no se reconoce la tonalidad (${trimmed})`);
+      if (!key) rejected.push(`Línea ${index+1}`);
       else accepted.push(make(title.slice(0,100), key, bpm, 'manual'));
     });
     return {accepted, rejected};
@@ -442,10 +442,7 @@ return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/1
     const r = parseBulk($('bulk').value);
     if (replace) songs.splice(0, songs.length);
     pushSongs(r.accepted); refresh();
-    let msg = `Añadidas ${r.accepted.length} canciones válidas. Total en la lista: ${songs.length}.`;
-    if (r.rejected.length) msg += `\nNo se han añadido ${r.rejected.length} líneas:\n${r.rejected.slice(0,8).join('\n')}${r.rejected.length>8?'\n…':''}`;
-    if (!r.accepted.length && !r.rejected.length) msg = 'Pega primero una lista de canciones.';
-    $('bulkMsg').textContent = msg;
+    $('bulkMsg').textContent = `Añadidas ${r.accepted.length} canciones. Total: ${songs.length}.`;
   }
   $('bulkAdd').addEventListener('click', () => importBulk(false));
   $('bulkReplace').addEventListener('click', () => importBulk(true));$('clear').addEventListener('click', () => { songs.splice(0, songs.length); refresh(); $('audioLog').replaceChildren();$('bulkMsg').textContent = 'Lista vaciada.'; });
@@ -471,15 +468,13 @@ return Math.abs(best-Math.round(best))<.3?Math.round(best):Math.round(best*10)/1
         pushSongs([make(f.name.replace(/\.[^.]+$/,''), r.k, r.b, 'auto')]); refresh();
         line.textContent = `✔ ${f.name}: ${keyName(r.k)} · ${camelot(r.k)} · ${r.b ? r.b + ' BPM' : 'BPM no detectado'}`;
       } catch (e) {
-        line.textContent = `✖ ${f.name}: no se ha podido analizar (formato no compatible o archivo dañado).`;
+        line.textContent = `✖ ${f.name}: error al analizar.`;
       }
     }
     busy = false;
   }
   function addFiles(files) {
-    let rejected = 0;
-    for (const f of files) { if (EXT.test(f.name) || f.type.startsWith('audio/')) queue.push(f); else rejected++; }
-    if (rejected) $('audioLog').appendChild(el('div', `${rejected} archivo(s) ignorado(s) por no ser audio.`, 'log'));
+    for (const f of files) { if (EXT.test(f.name) || f.type.startsWith('audio/')) queue.push(f); }
     runQueue();
   }
   const input = $('audioFiles'), drop =$('audioDrop');
